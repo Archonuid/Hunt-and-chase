@@ -26,7 +26,7 @@ public class Predator extends JPanel {
     private Main mainInstance; // Reference to Main
     private PredatorActionListener actionListener;
 
-    public Predator(int startX, int startY, int initialSpeed, int initialDirectionX, int initialDirectionY, Main main, PredatorActionListener actionListener) {
+    public Predator(int startX, int startY, int initialSpeed, int initialDirectionX, int initialDirectionY, Main main) {
         this.mainInstance = main;
         this.actionListener = actionListener;
         this.x = startX;
@@ -44,6 +44,8 @@ public class Predator extends JPanel {
         System.setProperty("sun.java2d.opengl", "true");
         setupHungerTimer();
         scheduleTransition(1, Constants.TRANSITION_DELAY);
+        this.mainInstance = main;
+        this.actionListener = main;
     }
     
     private void setupHungerTimer() {

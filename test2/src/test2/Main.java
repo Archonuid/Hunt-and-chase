@@ -7,9 +7,10 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Main extends JFrame {
-	private static int nextId = 1;
-	private List<AnimalRecord> animalRecords;
+public class Main extends JFrame implements PredatorActionListener {
+    private static final long serialVersionUID = 1L;
+    private static int nextId = 1;
+    private List<AnimalRecord> animalRecords;
     private Plant grassField;
     private List<Prey> rabbits;
     private List<Predator> foxes;
@@ -20,19 +21,16 @@ public class Main extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setTitle("Planet Life Simulation");
         setSize(screenWidth, screenHeight);
+        setLayout(null); // Using null layout for absolute positioning
 
-        animalRecords = new ArrayList<>(); // Initialize the animal records list
+        animalRecords = new ArrayList<>();
         grassField = new Plant();
         rabbits = new ArrayList<>();
         foxes = new ArrayList<>();
 
-        // Spawn Rabbits
         spawnRabbits();
-
-        // Spawn Foxes
         spawnFoxes();
 
-        // Start the simulation loop
         new Timer(100, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -67,8 +65,8 @@ public class Main extends JFrame {
             int directionY = Math.random() < 0.5 ? -1 : 1;
 
             // Create a new rabbit and add it to the list
-            Prey rabbit = new Prey(startX, startY, speed, directionX, directionY);
-            rabbit.transitionAge(age); // Set the age
+            Prey rabbit = new Prey(nextId, startX, startY, speed, directionX, directionY, this);
+            rabbit.transitionAge(age);
             rabbits.add(rabbit);
             animalRecords.add(new AnimalRecord(nextId++, age, "Rabbit", new Point(startX, startY)));
         }
@@ -99,12 +97,11 @@ public class Main extends JFrame {
 
             // Pass 'this' as an argument to the Predator constructor
             Predator fox = new Predator(startX, startY, speed, directionX, directionY, this);
-            fox.transitionAge(age); // Set the age
+            fox.transitionAge(age);
             foxes.add(fox);
             animalRecords.add(new AnimalRecord(nextId++, age, "Fox", new Point(startX, startY)));
         }
     }
-
 
     private void moveRabbits() {
         for (Prey rabbit : rabbits) {
@@ -146,12 +143,14 @@ public class Main extends JFrame {
     public void paint(Graphics g) {
         super.paint(g);
         grassField.draw(g, getWidth(), getHeight());
-        for (Prey rabbit : rabbits) {
-            rabbit.draw(g);
-        }
-        for (Predator fox : foxes) {
-            fox.draw(g);
-        }
+        // Note: Individual drawing of rabbits and foxes may not be needed
+        // if they are added to the JFrame and manage their own painting.
+    }
+
+    @Override
+    public void onRabbitCaught(int rabbitId) {
+        rabbits.removeIf(rabbit -> rabbit.getId() == rabbitId);
+        animalRecords.removeIf(record -> record.getId() == rabbitId && record.getType().equals("Rabbit"));
     }
 
     public List<AnimalRecord> getAnimalRecords() {
@@ -173,5 +172,9 @@ public class Main extends JFrame {
                 }
             }
         }
+    }
+    
+    public interface PredatorActionListener {
+        void onRabbitCaught(int rabbitId);
     }
 }

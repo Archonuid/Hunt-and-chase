@@ -3,14 +3,15 @@ package test2;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Image;
+import java.awt.Point;
 import java.awt.Toolkit;
+import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 import javax.swing.JPanel;
-import java.util.Random;
-
 
 public class Prey extends JPanel {
+    private int id;  // Unique identifier for the prey
     private int age;  // 0 for baby, 1 for young, 2 for adult
     private int originalSpeed;  // Store the original speed for reference
     private Image rabbitImage;
@@ -22,23 +23,25 @@ public class Prey extends JPanel {
     private boolean isEating;
     private Timer eatTimer;
     private boolean isStopped = false;
+    private Main mainInstance; // Reference to Main
 
-    public Prey(int startX, int startY, int initialSpeed, int initialDirectionX, int initialDirectionY) {
-        x = startX;
-        y = startY;
+    public Prey(int id, int startX, int startY, int initialSpeed, int initialDirectionX, int initialDirectionY, Main main) {
+        this.id = id;
+        this.mainInstance = main;
+        this.x = startX;
+        this.y = startY;
         this.rabbitImage = Constants.loadImage(Constants.PREY_IMAGE_PATH);
-        timer = new Timer();
-        screenSize = Constants.getScreenSize(); // Get the current screen size
-        scheduleTransition(1, Constants.TRANSITION_DELAY); // Schedule transition to young after 30 seconds
-        speed = initialSpeed;
-        directionX = initialDirectionX;
-        directionY = initialDirectionY;
-        age = 0;  // Initially set as baby
-        originalSpeed = initialSpeed;
-        eatTimer = new Timer();
-        screenSize = Constants.getScreenSize(); // Get the current screen size
+        this.timer = new Timer();
+        this.screenSize = Constants.getScreenSize();
+        this.speed = initialSpeed;
+        this.directionX = initialDirectionX;
+        this.directionY = initialDirectionY;
+        this.age = 0;  // Initially set as baby
+        this.originalSpeed = initialSpeed;
+        this.eatTimer = new Timer();
         setDoubleBuffered(true);
         System.setProperty("sun.java2d.opengl", "true");
+        scheduleTransition(1, Constants.TRANSITION_DELAY);
     }
     
     private class AgeTransitionTask extends TimerTask {
@@ -115,6 +118,10 @@ public class Prey extends JPanel {
     public int getAge() {
         return age;
     }
+    
+    public int getId() {
+        return id;
+    }
 
     private class RemoveImageTask extends TimerTask {
         private Prey prey;
@@ -157,10 +164,12 @@ public class Prey extends JPanel {
         }
     }
 
-    public void draw(Graphics g) {
-        // Draw the fox image
-        int size = getSizeByAge(); // Get the size based on age
-        g.drawImage(rabbitImage, x, y, size, size, null);
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        if (rabbitImage != null) {
+            g.drawImage(rabbitImage, x, y, this); // x and y are the coordinates
+        }
     }
 
     public int getX() {
@@ -204,12 +213,20 @@ public class Prey extends JPanel {
 
     public void move() {
         // Update the position based on the current direction and speed
-        if (!isEating) {
+    	if (!isEating && isFoxNearby() && attemptEscape()) {
+            escape();
+        } else {
             x += speed * directionX;
             y += speed * directionY;
         }
         handleScreenEdges();
         maybeStop();
+    }
+    
+    private void normalMovement() {
+        double speedFactor = (age == 0) ? Constants.BABY_SPEED_FACTOR : (age == 1) ? Constants.YOUNG_SPEED_FACTOR : 1.0;
+        x += speed * directionX * speedFactor;
+        y += speed * directionY * speedFactor;
     }
     
     private void handleScreenEdges() {
@@ -262,4 +279,38 @@ public class Prey extends JPanel {
         directionX = random.nextInt(3) - 1; // Random value between -1 and 1
         directionY = random.nextInt(3) - 1; // Random value between -1 and 1
     }
+    
+    private boolean isFoxNearby() {
+        for (AnimalRecord record : mainInstance.getAnimalRecords()) {
+            if (record.getType().equals("Fox")) {
+                Point foxPosition = record.getPosition();
+                if (new Point(x, y).distance(foxPosition) < 35) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean attemptEscape() {
+        double escapeChance = age == 2 ? 0.1 : 0.05; // 10% for adult, 5% for young
+        return Math.random() < escapeChance;
+    }
+
+    private void escape() {
+        // Change direction randomly to simulate erratic escape behavior
+        Random random = new Random();
+        directionX = random.nextInt(3) - 1; // Random value between -1 and 1
+        directionY = random.nextInt(3) - 1;
+
+        // Optionally, increase the speed temporarily for the escape
+        double escapeSpeedFactor = 1.5; // Increase speed by 50% during escape
+        x += speed * escapeSpeedFactor * directionX;
+        y += speed * escapeSpeedFactor * directionY;
+
+        // You may want to limit the number of movements in escape mode,
+        // after which the rabbit goes back to normal movement.
+        // This can be achieved by using a counter or a timer.
+    }
+
 }
