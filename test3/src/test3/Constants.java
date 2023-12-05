@@ -45,8 +45,8 @@ public class Constants {
     public static final int ADULT_FOX_SUCCESSFUL_HUNT = 95; // 95% success rate for adult foxes
     public static final int YOUNG_FOX_SUCCESSFUL_HUNT = 90; // 90% success rate for young foxes
     public static final int FOX_DEATH_BY_HUNGER = 45000; // Fox dies if hungry for more than 45 seconds
-    public static final int ESCAPE_RANGE = 45; // Rabbits can detect foxes within 35px
-    public static final int FOX_HUNT_TIMEOUT_RANGE = 80; // Fox stops chasing if rabbit is more than 60px away
+    public static final int ESCAPE_RANGE = 30; // Rabbits can detect foxes within 35px
+    public static final int FOX_HUNT_OUT_OF_RANGE = 80; // Fox stops chasing if rabbit is more than 60px away
 
     public static double calculateDistance(int x1, int y1, int x2, int y2) {
         return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));

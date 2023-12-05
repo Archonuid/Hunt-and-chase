@@ -57,7 +57,10 @@ public class Main extends JFrame {
             int directionX = Math.random() < 0.5 ? -1 : 1; // Random direction
             int directionY = Math.random() < 0.5 ? -1 : 1;
             
-            Prey rabbit = new Prey(startX, startY, speed, directionX, directionY);
+            // Randomly assign sex (true for male, false for female)
+            boolean isMale = Math.random() < 0.5;
+            
+            Prey rabbit = new Prey(startX, startY, speed, directionX, directionY, isMale);
             rabbit.transitionAge(age); // Set the age
             rabbits.add(rabbit);
         }
@@ -84,8 +87,11 @@ public class Main extends JFrame {
             int startY = (int) (Math.random() * screenHeight);
             int directionX = Math.random() < 0.5 ? -1 : 1; // Random direction
             int directionY = Math.random() < 0.5 ? -1 : 1;
+            
+            // Randomly assign sex (true for male, false for female)
+            boolean isMale = Math.random() < 0.5;
 
-            Predator fox = new Predator(startX, startY, speed, directionX, directionY);
+            Predator fox = new Predator(startX, startY, speed, directionX, directionY, isMale);
             fox.transitionAge(age); // Set the age
             foxes.add(fox);
         }
@@ -150,7 +156,7 @@ public class Main extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new Main().setVisible(true));
+        SwingUtilities.invokeLater(() -> new Main().setVisible(true)); // LAMBDA function, what does it do
     }
     
     // Method to remove a rabbit from the list
