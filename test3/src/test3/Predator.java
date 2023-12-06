@@ -23,6 +23,8 @@ public class Predator extends JPanel implements Drawable {
     private boolean hungry = false;
     private Timer hungerTimer;
     private boolean isMale; // true for male, false for female
+    private boolean isMating = false;
+    private int matingCooldown = 0;
 
     public Predator(int startX, int startY, int initialSpeed, int initialDirectionX, int initialDirectionY, boolean isMale) {
         x = startX;
@@ -71,6 +73,10 @@ public class Predator extends JPanel implements Drawable {
     
     public boolean isMale() {
         return isMale;
+    }
+    
+    public boolean isMating() {
+        return isMating;
     }
 
     public String getStatus() {
@@ -162,29 +168,29 @@ public class Predator extends JPanel implements Drawable {
             stopMovements(); // Stop any ongoing movements or behaviors
             delayAndRemoveImage(); // Delay the image removal
         }
-        
+
         private void replaceWithDeadImage() {
             predator.foxImage = Constants.loadImage(Constants.DEAD_PREDATOR_IMAGE_PATH);
         }
-        
+
         private void delayAndRemoveImage() {
-            // Delay the image removal by 2 seconds
+            // Delay the image removal by 1 second
             Timer removeImageTimer = new Timer();
             removeImageTimer.schedule(new TimerTask() {
                 @Override
                 public void run() {
                     removeImage(); // Remove the image
                 }
-            }, 2000);
+            }, 1000);
         }
-        
+
         private void removeImage() {
-            foxImage = null;  // Set the image to null
+            predator.foxImage = null;  // Set the image to null
         }
 
         private void stopMovements() {
             // Cancel any remaining tasks in the timer
-        	predator.directionX = 0;
+            predator.directionX = 0;
             predator.directionY = 0;
             // Implement additional logic to stop movements or behaviors
         }
@@ -241,34 +247,25 @@ public class Predator extends JPanel implements Drawable {
         }
     }
     
+    private void moveFox(double speedFactor) {
+        x += speed * directionX * speedFactor;
+        y += speed * directionY * speedFactor;
+        handleScreenEdges();
+        maybeStop();
+        startHungerCountdown();
+        chase(Main.getRabbits());
+    }
+
     public void moveBabyFox() {
-        // Baby fox may move more randomly or slowly
-    	double speedFactor = Constants.BABY_SPEED_FACTOR;
-        x += speed * directionX * speedFactor; // Move at half the speed
-        y += speed * directionY * speedFactor;
-        handleScreenEdges();
-        maybeStop();
+        moveFox(Constants.BABY_SPEED_FACTOR);
     }
-    
+
     public void moveYoungFox() {
-        // Young fox may move faster or exhibit playful behavior
-    	double speedFactor = Constants.YOUNG_SPEED_FACTOR;
-        x += speed * directionX * speedFactor; // Move at 25% faster than baby fox
-        y += speed * directionY * speedFactor;
-        handleScreenEdges();
-        maybeStop();
-        startHungerCountdown(); // Start hunger countdown for young foxes
-        chase(Main.getRabbits()); // Attempt to catch nearby rabbits
+        moveFox(Constants.YOUNG_SPEED_FACTOR);
     }
-    
+
     public void move() {
-        // Update the position based on the current direction and speed
-        x += speed * directionX;
-        y += speed * directionY;
-        handleScreenEdges();
-        maybeStop();
-        startHungerCountdown(); // Start hunger countdown for adult foxes
-        chase(Main.getRabbits()); // Attempt to catch nearby rabbits
+        moveFox(Constants.ADULT_SPEED_FACTOR);
     }
     
     // Add a method to start the hunger countdown
@@ -280,10 +277,19 @@ public class Predator extends JPanel implements Drawable {
                     die(); // Fox dies if hungry for more than FOX_DEATH_BY_HUNGER milliseconds
                 } else {
                     hungry = true;
+                    // Schedule death after 40 seconds of continuous hunger
+                    Timer deathTimer = new Timer();
+                    deathTimer.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            die(); // Fox dies after 40 seconds of continuous hunger
+                        }
+                    }, Constants.FOX_DEATH_BY_HUNGER);
                 }
             }
         }, Constants.FOX_HUNGER_TIME);
     }
+
     
     // Add a method to stop the hunger countdown
     private void stopHungerCountdown() {
@@ -332,10 +338,15 @@ public class Predator extends JPanel implements Drawable {
                             break;
                         // Add additional cases if needed for other age values
                     }
+
+                    // Replace the immediate die call with setting the fox as hungry
+                    hungry = true; // Set the fox as hungry
+                    stopHungerCountdown(); // Stop the hunger countdown
                 }
             }
         }
     }
+
 
     // Method to remove a rabbit from the list
     private void removeEatenRabbit(Prey rabbit) {
@@ -358,9 +369,99 @@ public class Predator extends JPanel implements Drawable {
         return nearestRabbit;
     }
     
+    public void startMatingSeason() {
+        if (matingCooldown <= 0) {
+            matingCooldown = Constants.MATING_SEASON_DURATION;
+            mate();
+        }
+    }
+    
+    private void mate() {
+        if (isMale && !isMating && age == 2) { // Check if the predator is an adult
+            Predator mate = findMate();
+            if (mate != null && mate.getAge() == 2) { // Check if the mate is an adult
+                isMating = true;
+                moveTowards(mate.getX(), mate.getY());
+
+                Timer matingTimer = new Timer();
+                matingTimer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        spawnNewFox(mate);
+                        isMating = false;
+                    }
+                }, Constants.MATING_DELAY);
+            }
+        }
+    }
+    
+    private Predator findMate() {
+        for (Predator predator : Main.getFoxes()) {
+            if (predator.isMale() != this.isMale() && !predator.isMating()) {
+                return predator;
+            }
+        }
+        return null;
+    }
+    
+    public Predator getOffspring() {
+    	// probability or conditions for reproduction
+        if (isMating() && age == 2 && Math.random() < Constants.PREDATOR_REPRODUCTION) {
+            // Create a new baby rabbit with similar characteristics
+            return new Predator(x, y, originalSpeed, directionX, directionY, Math.random() < 0.5);
+        }
+        return null; // No offspring
+    }
+    
+    private void moveTowards(int targetX, int targetY) {
+        // Calculate the direction to move towards the target
+        int deltaX = targetX - getX();
+        int deltaY = targetY - getY();
+
+        // Calculate the distance between the predator and the target
+        double distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+        // Normalize the direction vector
+        double normalizedDeltaX = deltaX / distance;
+        double normalizedDeltaY = deltaY / distance;
+
+        // Adjust the predator's direction based on the normalized vector
+        directionX = (int) Math.round(normalizedDeltaX);
+        directionY = (int) Math.round(normalizedDeltaY);
+    }
+    
+    private void spawnNewFox(Predator mate) {
+        // Implement logic to spawn a new baby fox at the female's position
+        int babyX = mate.getX();
+        int babyY = mate.getY();
+
+        // Randomly decide the number of baby foxes to spawn (between 1 and 5)
+        int numberOfBabyFoxes = (int) (Math.random() * 5) + 1;
+
+        for (int i = 0; i < numberOfBabyFoxes; i++) {
+            // Randomly decide the sex of the baby fox
+            boolean isBabyMale = Math.random() < 0.5;
+
+            // Create a new baby fox and add it to the list
+            Predator babyFox = new Predator(babyX, babyY, originalSpeed, directionX, directionY, isBabyMale);
+            babyFox.transitionAge(0); // Set the age to baby
+            Main.getFoxes().add(babyFox);
+        }
+    }
+    
     @Override
     public void draw(Graphics g) {
         int size = getSizeByAge();
+
+        // Draw the border based on gender
+        if (isMale()) {
+            g.setColor(Color.BLUE);
+        } else {
+            g.setColor(Color.PINK);
+        }
+        g.drawRect(x - 1, y - 1, size + 1, size + 1);
+
+        // Draw the fox image
         if (hungry) {
             // Draw a red border around the fox if hungry
             g.setColor(Color.RED);

@@ -1,4 +1,5 @@
 package test3;
+
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Image;
@@ -19,11 +20,11 @@ public class Prey extends JPanel implements Drawable {
     private Dimension screenSize; // Store the screen size
     private Timer timer;
     private boolean isEating;
-    private Timer eatTimer;
-    private boolean isStopped = false;
     private int id; // Unique ID for each rabbit
     private boolean isEaten;
     private boolean isMale; // true for male, false for female
+    private boolean isMating = false;
+    private int matingCooldown = 0;
 
     public Prey(int startX, int startY, int initialSpeed, int initialDirectionX, int initialDirectionY, boolean isMale) {
         x = startX;
@@ -37,7 +38,6 @@ public class Prey extends JPanel implements Drawable {
         directionY = initialDirectionY;
         age = 0;  // Initially set as baby
         originalSpeed = initialSpeed;
-        eatTimer = new Timer();
         setDoubleBuffered(true);
         System.setProperty("sun.java2d.opengl", "true");
         this.id = ++Constants.lastRabbitId; // Assign and increment the ID
@@ -64,10 +64,6 @@ public class Prey extends JPanel implements Drawable {
     public int getAge() {
         return age;
     }
-    
-    public boolean isEaten() {
-        return isEaten;
-    }
 
     public void setEaten(boolean eaten) {
         isEaten = eaten;
@@ -80,10 +76,20 @@ public class Prey extends JPanel implements Drawable {
     public boolean isMale() {
         return isMale;
     }
+    
+    public boolean isMating() {
+        return isMating;
+    }
 
     public String getStatus() {
     	String sex = isMale ? "Male" : "Female";
         return "Rabbit ID: " + id + ", Age: " + age + ", Size: " + getSizeByAge() + ", Sex: " + sex;
+    }
+    
+    public boolean isEating() {
+        // Implement the logic to determine if the prey is currently eating
+        // For example, you might have a boolean field like isEating and return its value.
+        return isEating;
     }
     
     public void transitionAge(int targetAge) {
@@ -170,29 +176,29 @@ public class Prey extends JPanel implements Drawable {
             stopMovements(); // Stop any ongoing movements or behaviors
             delayAndRemoveImage(); // Delay the image removal
         }
-        
-        public void replaceWithDeadImage() {
-            rabbitImage = Constants.loadImage(Constants.DEAD_PREY_IMAGE_PATH);
+
+        private void replaceWithDeadImage() {
+            prey.rabbitImage = Constants.loadImage(Constants.DEAD_PREY_IMAGE_PATH);
         }
-        
+
         private void delayAndRemoveImage() {
-            // Delay the image removal by 2 seconds
+            // Delay the image removal by 1 second
             Timer removeImageTimer = new Timer();
             removeImageTimer.schedule(new TimerTask() {
                 @Override
                 public void run() {
                     removeImage(); // Remove the image
                 }
-            }, 2000);
+            }, 1000);
         }
-        
+
         private void removeImage() {
             prey.rabbitImage = null;  // Set the image to null
         }
 
         private void stopMovements() {
             // Cancel any remaining tasks in the timer
-        	prey.directionX = 0;
+            prey.directionX = 0;
             prey.directionY = 0;
             // Implement additional logic to stop movements or behaviors
         }
@@ -249,48 +255,29 @@ public class Prey extends JPanel implements Drawable {
         }
     }
     
-    public void moveBabyRabbit() {
-        // Baby rabbit may move more randomly or slowly
-        double speedFactor = Constants.BABY_SPEED_FACTOR;
+    private void moveWithFactor(double speedFactor) {
         if (!isEating) {
-            x += speed * directionX * speedFactor; // Move at half the speed
+            x += speed * directionX * speedFactor;
             y += speed * directionY * speedFactor;
         }
         handleScreenEdges();
         maybeStop();
         Predator nearestFox = findNearestFox(Main.getFoxes());
         if (nearestFox != null && Constants.calculateDistance(getX(), getY(), nearestFox.getX(), nearestFox.getY()) <= Constants.ESCAPE_RANGE) {
-            outOfRange(nearestFox); // Move away from the nearest fox
+            outOfRange(nearestFox);
         }
+    }
+
+    public void moveBabyRabbit() {
+        moveWithFactor(Constants.BABY_SPEED_FACTOR);
     }
 
     public void moveYoungRabbit() {
-        // Young rabbit may move faster or exhibit playful behavior
-        double speedFactor = Constants.YOUNG_SPEED_FACTOR;
-        if (!isEating) {
-            x += speed * directionX * speedFactor; // Move at 25% faster than baby rabbit
-            y += speed * directionY * speedFactor;
-        }
-        handleScreenEdges();
-        maybeStop();
-        Predator nearestFox = findNearestFox(Main.getFoxes());
-        if (nearestFox != null && Constants.calculateDistance(getX(), getY(), nearestFox.getX(), nearestFox.getY()) <= Constants.ESCAPE_RANGE) {
-            outOfRange(nearestFox); // Move away from the nearest fox
-        }
+        moveWithFactor(Constants.YOUNG_SPEED_FACTOR);
     }
 
     public void move() {
-        // Update the position based on the current direction and speed
-        if (!isEating) {
-            x += speed * directionX;
-            y += speed * directionY;
-        }
-        handleScreenEdges();
-        maybeStop();
-        Predator nearestFox = findNearestFox(Main.getFoxes());
-        if (nearestFox != null && Constants.calculateDistance(getX(), getY(), nearestFox.getX(), nearestFox.getY()) <= Constants.ESCAPE_RANGE) {
-            outOfRange(nearestFox); // Move away from the nearest fox
-        }
+        moveWithFactor(Constants.ADULT_SPEED_FACTOR);
     }
     
     // Add a method to detect nearby foxes within the escape range
@@ -346,16 +333,99 @@ public class Prey extends JPanel implements Drawable {
         }
     }
     
+    public void startMatingSeason() {
+        if (!isEating() && matingCooldown <= 0) {
+            matingCooldown = Constants.MATING_SEASON_DURATION;
+            mate();
+        }
+    }
+
+    private void mate() {
+        if (!isMale && !isMating && age == 2) { // Check if the prey is an adult and female
+            Prey mate = findMate();
+            if (mate != null && mate.getAge() == 2) { // Check if the mate is an adult
+                isMating = true;
+                moveTowards(mate.getX(), mate.getY());
+
+                Timer matingTimer = new Timer();
+                matingTimer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        spawnNewRabbit(mate);
+                        isMating = false;
+                    }
+                }, Constants.MATING_DELAY);
+            }
+        }
+    }
+
+    private Prey findMate() {
+        for (Prey prey : Main.getRabbits()) {
+            if (prey.isMale() != this.isMale() && !prey.isMating()) {
+                return prey;
+            }
+        }
+        return null;
+    }
+    
+    public Prey getOffspring() {
+        // probability or conditions for reproduction
+        if (isMating() && age == 2 && Math.random() < Constants.PREY_REPRODUCTION) {
+            // Create a new baby rabbit with similar characteristics
+            return new Prey(x, y, originalSpeed, directionX, directionY, Math.random() < 0.5);
+        }
+        return null; // No offspring
+    }
+
+    private void moveTowards(int targetX, int targetY) {
+        // Calculate the direction to move towards the target
+        int deltaX = targetX - getX();
+        int deltaY = targetY - getY();
+
+        // Calculate the distance between the prey and the target
+        double distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+        // Normalize the direction vector
+        double normalizedDeltaX = deltaX / distance;
+        double normalizedDeltaY = deltaY / distance;
+
+        // Adjust the prey's direction based on the normalized vector
+        directionX = (int) Math.round(normalizedDeltaX);
+        directionY = (int) Math.round(normalizedDeltaY);
+    }
+
+    private void spawnNewRabbit(Prey mate) {
+        // Implement logic to spawn a new baby rabbit at the female's position
+        int babyX = mate.getX();
+        int babyY = mate.getY();
+
+        // Randomly decide the number of baby rabbits to spawn (between 1 and 8)
+        int numberOfBabyRabbits = (int) (Math.random() * 8) + 1;
+        
+        for (int i = 0; i < numberOfBabyRabbits; i++) {
+        	// Randomly decide the sex of the baby rabbit
+        	boolean isBabyMale = Math.random() < 0.5;
+
+        	// Create a new baby rabbit and add it to the list
+        	Prey babyRabbit = new Prey(babyX, babyY, originalSpeed, directionX, directionY, isBabyMale);
+        	babyRabbit.transitionAge(0); // Set the age to baby
+        	Main.getRabbits().add(babyRabbit);
+        }
+    }
+    
     @Override
     public void draw(Graphics g) {
         int size = getSizeByAge();
-        if (isEaten) {
-            // Draw a different representation for a prey that has been caught
-            g.setColor(Color.GRAY);
-            g.fillRect(x, y, size, size);
+
+        // Draw the border based on gender
+        if (isMale()) {
+            g.setColor(Color.BLUE);
         } else {
-            // Draw the regular prey image
-            g.drawImage(rabbitImage, x, y, size, size, this);
+            g.setColor(Color.PINK);
         }
-    } 
+        g.drawRect(x - 1, y - 1, size + 1, size + 1);
+
+        // Draw the rabbit image
+        g.drawImage(rabbitImage, x, y, size, size, this);
+    }
 }

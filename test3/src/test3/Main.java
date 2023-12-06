@@ -35,7 +35,7 @@ public class Main extends JFrame {
         foxes = new ArrayList<>();
 
      // Spawn 12 rabbits
-        for (int i = 0; i < 12; i++) {
+        for (int i = 0; i < 25; i++) {
             int age = (int) (Math.random() * 3); // Randomly assign age (excluding adult for initial spawn)
             int size;
             int speed;
@@ -66,7 +66,7 @@ public class Main extends JFrame {
         }
 
      // Spawn 4 foxes
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 15; i++) {
             int age = (int) (Math.random() * 3); // Randomly assign age (excluding adult for initial spawn)
             int size;
             int speed;
@@ -108,6 +108,8 @@ public class Main extends JFrame {
     }
 
     private void moveRabbits() {
+        List<Prey> newRabbits = new ArrayList<>();
+
         for (Prey rabbit : rabbits) {
             if (rabbit != null) {
                 switch (rabbit.getAge()) {
@@ -121,11 +123,21 @@ public class Main extends JFrame {
                         rabbit.move();
                         break;
                 }
+
+                Prey offspring = rabbit.getOffspring();
+                if (offspring != null) {
+                    newRabbits.add(offspring);
+                }
             }
         }
+
+        // Adding new offspring to the simulation
+        rabbits.addAll(newRabbits);
     }
 
     private void moveFoxes() {
+        List<Predator> newFoxes = new ArrayList<>();
+
         for (Predator fox : foxes) {
             if (fox != null) {
                 switch (fox.getAge()) {
@@ -139,8 +151,67 @@ public class Main extends JFrame {
                         fox.move();
                         break;
                 }
+
+                Predator offspring = fox.getOffspring();
+                if (offspring != null) {
+                    newFoxes.add(offspring);
+                }
             }
         }
+
+        // Adding new offspring to the simulation
+        foxes.addAll(newFoxes);
+    }
+    
+    private void handleMatingSeason() {
+        handleFoxMating();
+        handleRabbitMating();
+        handleOffspring();
+    }
+    
+    private void handleFoxMating() {
+        for (Predator fox : foxes) {
+            if (fox != null) {
+                fox.startMatingSeason();
+            }
+        }
+    }
+    
+    private void handleRabbitMating() {
+        for (Prey rabbit : rabbits) {
+            if (rabbit != null) {
+                rabbit.startMatingSeason();
+            }
+        }
+    }
+    
+    private void handleOffspring() {
+        List<Prey> newRabbits = new ArrayList<>();
+        List<Predator> newFoxes = new ArrayList<>();
+
+        // Handling rabbit offspring
+        for (Prey rabbit : rabbits) {
+            if (rabbit != null) {
+                Prey offspring = rabbit.getOffspring();
+                if (offspring != null) {
+                    newRabbits.add(offspring);
+                }
+            }
+        }
+
+        // Handling fox offspring
+        for (Predator fox : foxes) {
+            if (fox != null) {
+                Predator offspring = fox.getOffspring();
+                if (offspring != null) {
+                    newFoxes.add(offspring);
+                }
+            }
+        }
+
+        // Adding new offspring to the simulation
+        rabbits.addAll(newRabbits);
+        foxes.addAll(newFoxes);
     }
 
     @Override
@@ -156,7 +227,19 @@ public class Main extends JFrame {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new Main().setVisible(true)); // LAMBDA function, what does it do
+        SwingUtilities.invokeLater(() -> {
+            Main main = new Main();
+            new Timer(100, new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    main.moveRabbits();
+                    main.moveFoxes();
+                    main.handleMatingSeason();
+                    main.repaint();
+                }
+            }).start();
+            main.setVisible(true);
+        });
     }
     
     // Method to remove a rabbit from the list
