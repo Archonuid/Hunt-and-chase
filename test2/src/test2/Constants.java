@@ -41,12 +41,12 @@ public class Constants {
     public static int lastRabbitId = 0;
     public static int lastFoxId = 0;
     
-    public static final int FOX_HUNGER_CYCLE = 20000; // Fox gets hungry every 20 seconds
-    public static final int HUNTING_RANGE = 80; // Foxes hunt within 30px range
+    public static final int FOX_HUNGER_CYCLE = 5000; // Fox gets hungry every 20 seconds
+    public static final int HUNTING_RANGE = 100; // Foxes hunt within 30px range
     public static final int ADULT_FOX_SUCCESSFUL_HUNT = 95; // 95% success rate for adult foxes
     public static final int YOUNG_FOX_SUCCESSFUL_HUNT = 90; // 90% success rate for young foxes
     public static final int FOX_DEATH_BY_HUNGER = 50000; // Fox dies if hungry for more than 45 seconds
-    public static final int ESCAPE_RANGE = 75; // Rabbits can detect foxes within 35px
+    public static final int ESCAPE_RANGE = 40; // Rabbits can detect foxes within 35px
     public static final int FOX_HUNT_TIMEOUT_RANGE = 80; // Fox stops chasing if rabbit is more than 60px away
 
     public static double calculateDistance(int x1, int y1, int x2, int y2) {

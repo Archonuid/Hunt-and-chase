@@ -9,6 +9,8 @@ import javax.swing.JPanel;
 import java.util.Random;
 import java.awt.Color;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 public class Predator extends JPanel implements Drawable {
     private int age;  // 0 for baby, 1 for young, 2 for adult
@@ -231,7 +233,7 @@ public class Predator extends JPanel implements Drawable {
         handleScreenEdges();
         maybeStop();
         startHungerCountdown();
-        hunt(Main.getRabbits());
+        chase(Main.getRabbits());
     }
 
     public void moveBabyFox() {
@@ -246,7 +248,7 @@ public class Predator extends JPanel implements Drawable {
         moveFox(Constants.ADULT_SPEED_FACTOR);
     }
     
-    // HUNT, EAT
+    // CHASE, HUNT, EAT
     public boolean isHungry() {
         return hungry;
     }
@@ -254,11 +256,16 @@ public class Predator extends JPanel implements Drawable {
     public long getLastSuccessfulHuntTime() {
         return lastSuccessfulHuntTime;
     }
-    
+
     public void setHungry(boolean hungry) {
         this.hungry = hungry;
     }
-    
+
+    private boolean isWithinHuntingRange(Prey target) {
+        double distance = Constants.calculateDistance(getX(), getY(), target.getX(), target.getY());
+        return distance <= Constants.HUNTING_RANGE;
+    }
+
     private long lastSuccessfulHuntTime = System.currentTimeMillis();
 
     private void startHungerCountdown() {
@@ -266,21 +273,14 @@ public class Predator extends JPanel implements Drawable {
             @Override
             public void run() {
                 for (Predator fox : Main.getFoxes()) {
-                    if (fox != null) {
-                        if (!fox.isHungry()) {
-                            long currentTime = System.currentTimeMillis();
-                            long timeSinceLastHunt = currentTime - fox.getLastSuccessfulHuntTime();
+                    if (fox != null && !fox.isHungry()) {
+                        long currentTime = System.currentTimeMillis();
+                        long timeSinceLastHunt = currentTime - fox.getLastSuccessfulHuntTime();
 
-                            if (timeSinceLastHunt >= Constants.FOX_HUNGER_CYCLE) {
-                                fox.setHungry(true);
-                            }
+                        if (timeSinceLastHunt >= Constants.FOX_HUNGER_CYCLE) {
+                            fox.setHungry(true);
+                            fox.chase(Main.getRabbits());
                         }
-                    }
-                }
-
-                for (Predator fox : Main.getFoxes()) {
-                    if (fox != null && fox.isHungry()) {
-                        fox.hunt(Main.getRabbits());
                     }
                 }
             }
@@ -293,68 +293,50 @@ public class Predator extends JPanel implements Drawable {
         hungerTimer = new Timer();
         startHungerCountdown();
     }
-    
-    public void hunt(List<Prey> rabbits) {
+
+    public void chase(List<Prey> rabbits) {
         if (!hungry) {
-            // If not hungry, don't hunt
+            // If not hungry, don't chase
             return;
         }
 
         Prey targetRabbit = findNearestRabbit(rabbits);
 
-        if (targetRabbit != null) {
-            double distance = Constants.calculateDistance(getX(), getY(), targetRabbit.getX(), targetRabbit.getY());
+        if (targetRabbit != null && isWithinHuntingRange(targetRabbit)) {
+            chaseTarget(targetRabbit);
+        }
+    }
 
-            if (distance <= Constants.HUNTING_RANGE && distance < 1) {
-                int successRate = (getAge() == 2) ? Constants.ADULT_FOX_SUCCESSFUL_HUNT : Constants.YOUNG_FOX_SUCCESSFUL_HUNT;
-                if (Math.random() * 100 < successRate) {
-                    // Fox catches the rabbit based on success rate
-                    targetRabbit.setEaten(true);
-                    // Stop all movements
-                    directionX = 0;
-                    directionY = 0;
-                    
-                    // Set the last successful hunt time
-                    lastSuccessfulHuntTime = System.currentTimeMillis();
+    private void chaseTarget(Prey targetRabbit) {
+        // Calculate the angle between the fox and the rabbit
+        double chaseSpeedFactor = 2.0; // Adjust the value as needed
+        double angle = Math.atan2(targetRabbit.getY() - getY(), targetRabbit.getX() - getX());
 
-                    // Schedule the eat method after a delay
-                    Timer eatTimer = new Timer();
-                    eatTimer.schedule(new TimerTask() {
-                        @Override
-                        public void run() {
-                            eat(targetRabbit);
-                            hungry = false; // Reset hunger state after eating
-                            renewHungerCountdown(); // Stop the hunger countdown
-                        }
-                    }, 2000); // Delay of 2 seconds
-                } else {
-                    // Rabbit escaped, stop chasing
-                    //directionX = 0;
-                    //directionY = 0;
+        // Calculate the new direction based on the angle
+        directionX = (int) Math.round(Math.cos(angle));
+        directionY = (int) Math.round(Math.sin(angle));
 
-                    // Add code to go back to default movement based on fox's age
-                    switch (getAge()) {
-                        case 0:
-                            moveBabyFox(); // Implement moveBabyFox method for baby fox movement
-                            break;
-                        case 1:
-                            moveYoungFox(); // Implement moveYoungFox method for young fox movement
-                            break;
-                        case 2:
-                            move(); // Implement move method for adult fox movement
-                            break;
-                    }
-                }
-            }
+        // Move the fox to close the distance at an increased speed
+        x += chaseSpeedFactor * speed * directionX;
+        y += chaseSpeedFactor * speed * directionY;
+
+        // Handle screen edges to prevent the fox from going off-screen
+        handleScreenEdges();
+
+        // Check if the fox caught the rabbit
+        double distance = Constants.calculateDistance(getX(), getY(), targetRabbit.getX(), targetRabbit.getY());
+        if (distance <= 5) {
+            // Fox catches the rabbit
+            eat(targetRabbit);
         }
     }
 
     private void eat(Prey rabbit) {
-        // Remove all details of the eaten rabbit
-        // removeEatenRabbit(rabbit);
-
         // Stop all movements of the eaten rabbit
         rabbit.stopMovements();
+
+        // Remove the eaten rabbit from the simulation
+        Main.removeRabbit(rabbit);
 
         // Resume normal movement for the fox
         switch (getAge()) {
@@ -372,8 +354,10 @@ public class Predator extends JPanel implements Drawable {
 
         // Continue movement or perform other actions after a successful hunt
         hungry = false; // Reset hunger state
+        lastSuccessfulHuntTime = System.currentTimeMillis(); // Update the last successful hunt time
         renewHungerCountdown(); // Reset hunger countdown
     }
+
 
 	// Add a method to find the nearest rabbit within the hunting range
     private Prey findNearestRabbit(List<Prey> rabbits) {
@@ -403,5 +387,4 @@ public class Predator extends JPanel implements Drawable {
         // Draw the fox image
         g.drawImage(foxImage, x, y, size, size, this);
     }
-
 }

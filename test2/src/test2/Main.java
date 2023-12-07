@@ -6,6 +6,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
 
 public class Main extends JFrame {
     private Plant grassField;
@@ -31,8 +32,8 @@ public class Main extends JFrame {
         int screenHeight = (int) screenSize.getHeight();
 
         grassField = new Plant();
-        rabbits = new ArrayList<>();
-        foxes = new ArrayList<>();
+        rabbits = Collections.synchronizedList(new ArrayList<>());
+        foxes = Collections.synchronizedList(new ArrayList<>());
 
      // Spawn 12 rabbits
         for (int i = 0; i < 12; i++) {
@@ -149,7 +150,7 @@ public class Main extends JFrame {
         List<Prey> nearbyRabbits = findNearbyPrey(fox, rabbits);
 
         if (!nearbyRabbits.isEmpty()) {
-            fox.hunt(nearbyRabbits); // The hunt method in the Predator class will handle the hunting logic
+            fox.chase(nearbyRabbits); // The hunt method in the Predator class will handle the hunting logic
         }
     }
 
