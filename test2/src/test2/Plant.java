@@ -11,7 +11,7 @@ public class Plant {
     private static final Color GRASS_GREEN = new Color(34, 139, 34); // Dark green
     private static final int PATCH_SIZE = 20;
     private static final int PATCH_APPEARANCE_PROBABILITY = 5; // Adjust as needed
-    private static final int PATCH_DISAPPEAR_RATE = 2; // Adjust as needed
+    // private static final int PATCH_DISAPPEAR_RATE = 2; // Adjust as needed
     private static final int FADE_OUT_DELAY = 5000000; // Milliseconds to wait before fading out (increased delay)
     private static final int FADE_IN_DELAY = 5000000; // Milliseconds to wait before fading in (increased delay)
 

@@ -3,17 +3,14 @@ package test2;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Image;
-import java.awt.Point;
-import java.awt.Toolkit;
-import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 import javax.swing.JPanel;
+import java.util.Random;
+import java.awt.Color;
+import java.util.List;
 
-public class Predator extends JPanel {
-    private boolean isHungry = false;
-    private Timer hungerTimer;
-    private Timer deathTimer;
+public class Predator extends JPanel implements Drawable {
     private int age;  // 0 for baby, 1 for young, 2 for adult
     private int originalSpeed;  // Store the original speed for reference
     private Image foxImage;
@@ -22,234 +19,32 @@ public class Predator extends JPanel {
     private int directionX, directionY;
     private Dimension screenSize; // Store the screen size
     private Timer timer;
-    private Point position;
-    private Main mainInstance; // Reference to Main
-    private PredatorActionListener actionListener;
+    private int id; // Unique ID for each fox
+    private boolean hungry = false;
+    private Timer hungerTimer;
+    private boolean isMale; // true for male, false for female
 
-    public Predator(int startX, int startY, int initialSpeed, int initialDirectionX, int initialDirectionY, Main main) {
-        this.mainInstance = main;
-        this.actionListener = actionListener;
-        this.x = startX;
-        this.y = startY;
-        this.position = new Point(x, y);
+    public Predator(int startX, int startY, int initialSpeed, int initialDirectionX, int initialDirectionY, boolean isMale) {
+        x = startX;
+        y = startY;
         this.foxImage = Constants.loadImage(Constants.PREDATOR_IMAGE_PATH);
-        this.screenSize = Constants.getScreenSize();
-        this.speed = initialSpeed;
-        this.directionX = initialDirectionX;
-        this.directionY = initialDirectionY;
-        this.age = 0;
-        this.originalSpeed = initialSpeed;
-        this.timer = new Timer();
+        timer = new Timer();
+        screenSize = Constants.getScreenSize(); // Get the current screen size
+        scheduleTransition(1, Constants.TRANSITION_DELAY); // Schedule transition to young after 30 seconds
+        speed = initialSpeed;
+        directionX = initialDirectionX;
+        directionY = initialDirectionY;
+        age = 0;  // Initially set as baby
+        originalSpeed = initialSpeed;
         setDoubleBuffered(true);
         System.setProperty("sun.java2d.opengl", "true");
-        setupHungerTimer();
-        scheduleTransition(1, Constants.TRANSITION_DELAY);
-        this.mainInstance = main;
-        this.actionListener = main;
-    }
-    
-    private void setupHungerTimer() {
+        this.id = ++Constants.lastFoxId; // Assign and increment the ID
         hungerTimer = new Timer();
-        hungerTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                isHungry = true;
-                setupDeathTimer();
-            }
-        }, 15000, 15000); // gets hungry every 15 seconds
+        this.isMale = isMale;
+        this.lastSuccessfulHuntTime = System.currentTimeMillis();
+        Main.getFoxes().add(this);
     }
     
-    private void setupDeathTimer() {
-        if (deathTimer != null) {
-            deathTimer.cancel();
-        }
-        deathTimer = new Timer();
-        deathTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                if (isHungry) {
-                    die(); // Implement die method as per your existing logic
-                }
-            }
-        }, 40000); // 40 seconds to catch a rabbit
-    }
-
-    private void chaseNearestRabbit() {
-        AnimalRecord nearestRabbit = findNearestRabbit();
-        if (nearestRabbit != null) {
-            Point rabbitPosition = nearestRabbit.getPosition();
-            // Basic logic to move towards the rabbit
-            directionX = (rabbitPosition.x > x) ? 1 : -1;
-            directionY = (rabbitPosition.y > y) ? 1 : -1;
-
-            x += speed * directionX;
-            y += speed * directionY;
-            position.setLocation(x, y);
-
-            // Check for successful catch
-            if (position.distance(rabbitPosition) < 5 && successfulCatch(nearestRabbit)) { // 5 can be changed based on your catch criteria
-                eatRabbit(nearestRabbit);
-                isHungry = false;
-                if (deathTimer != null) {
-                    deathTimer.cancel();
-                }
-            }
-        }
-    }
-    
-    private AnimalRecord findNearestRabbit() {
-        AnimalRecord nearestRabbit = null;
-        double minDistance = Double.MAX_VALUE;
-        for (AnimalRecord record : mainInstance.getAnimalRecords()) {
-            if (record.getType().equals("Rabbit")) {
-                double distance = this.position.distance(record.getPosition());
-                if (distance < 30 && distance < minDistance) {
-                    nearestRabbit = record;
-                    minDistance = distance;
-                }
-            }
-        }
-        return nearestRabbit;
-    }
-    
-    private boolean successfulCatch(AnimalRecord rabbit) {
-        double catchProbability = age == 2 ? 0.95 : 0.85; // 95% for adult, 85% for young
-        return Math.random() < catchProbability;
-    }
-    
-    private void eatRabbit(AnimalRecord rabbit) {
-        // Notify that the rabbit is caught
-        if (actionListener != null) {
-            actionListener.onRabbitCaught(rabbit.getId());
-        }
-
-        // Reset hunger state and any other necessary fox state updates
-        isHungry = false;
-        // Other state updates as needed
-    }
-
-    
-    private class AgeTransitionTask extends TimerTask {
-        private Predator predator;
-        private int targetAge;
-
-        public AgeTransitionTask(Predator predator, int targetAge) {
-            this.predator = predator;
-            this.targetAge = targetAge;
-        }
-
-        @Override
-        public void run() {
-            predator.transitionAge(targetAge);
-        }
-    }
-    
-    private class DeathTask extends TimerTask {
-        private Predator predator;
-
-        public DeathTask(Predator predator) {
-            this.predator = predator;
-        }
-
-        @Override
-        public void run() {
-            predator.die();
-        }
-    }
-    
-    private int getSizeByAge() {
-        switch (age) {
-            case 0:
-                return Constants.BABY_SIZE;
-            case 1:
-                return Constants.YOUNG_SIZE;
-            case 2:
-                return Constants.ADULT_SIZE;
-            default:
-                return Constants.ADULT_SIZE; // Default to adult size
-        }
-    }
-    
-    public void transitionAge(int targetAge) {
-        age = targetAge;  // Update the age
-        switch (targetAge) {
-            case 1:
-                speed = originalSpeed; // Speed for young foxes
-                scheduleTransition(2, Constants.TRANSITION_DELAY); // Schedule transition to adult after 30 seconds
-                break;
-            case 2:
-                speed = originalSpeed; // Speed for adult foxes
-                scheduleDeath(Constants.TRANSITION_DELAY); // Schedule death after 30 seconds as an adult
-                break;
-            case 3:
-                die(); // Die when reaching adult age
-                break;
-        }
-    }
-    
-    private void scheduleTransition(int targetAge, int delay) {
-        timer.schedule(new AgeTransitionTask(this, targetAge), delay);
-    }
-
-    private void scheduleDeath(int delay) {
-        timer.schedule(new DeathTask(this), delay);
-    }
-
-    public void die() {
-        // Delay the image removal by 2 seconds
-        timer.schedule(new RemoveImageTask(this), 2000);
-    }
-
-    private class RemoveImageTask extends TimerTask {
-        private Predator predator;
-
-        public RemoveImageTask(Predator predator) {
-            this.predator = predator;
-        }
-
-        @Override
-        public void run() {
-            replaceWithDeadImage(); // Replace the image with the dead image
-            stopMovements(); // Stop any ongoing movements or behaviors
-            delayAndRemoveImage(); // Delay the image removal
-        }
-        
-        private void replaceWithDeadImage() {
-            predator.foxImage = Constants.loadImage(Constants.DEAD_PREDATOR_IMAGE_PATH);
-        }
-        
-        private void delayAndRemoveImage() {
-            // Delay the image removal by 2 seconds
-            Timer removeImageTimer = new Timer();
-            removeImageTimer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    removeImage(); // Remove the image
-                }
-            }, 2000);
-        }
-        
-        private void removeImage() {
-            foxImage = null;  // Set the image to null
-        }
-
-        private void stopMovements() {
-            // Cancel any remaining tasks in the timer
-        	predator.directionX = 0;
-            predator.directionY = 0;
-            // Implement additional logic to stop movements or behaviors
-        }
-    }
-
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        if (foxImage != null) {
-            int size = getSizeByAge();
-            g.drawImage(foxImage, x, y, size, size, this);
-        }
-    }
-
     public int getX() {
         return x;
     }
@@ -267,53 +62,142 @@ public class Predator extends JPanel {
         this.y = y;
     }
     
-    public void moveBabyFox() {
-        // Baby fox may move more randomly or slowly
-    	double speedFactor = Constants.BABY_SPEED_FACTOR;
-        x += speed * directionX * speedFactor; // Move at half the speed
-        y += speed * directionY * speedFactor;
-        handleScreenEdges();
-        maybeStop();
-    }
-    
-    public void moveYoungFox() {
-    	if (isHungry && age > 0) { // Baby foxes can't hunt
-            chaseNearestRabbit();
-        } else {
-        // Young fox may move faster or exhibit playful behavior
-        	double speedFactor = Constants.YOUNG_SPEED_FACTOR;
-        	x += speed * directionX * speedFactor; // Move at 25% faster than baby fox
-        	y += speed * directionY * speedFactor;
-        	handleScreenEdges();
-        	maybeStop();
-        	position.setLocation(x, y);
-        	updatePosition();
-        }
-    }
-    
-    public void move() {
-    	if (isHungry && age > 0) { // Baby foxes can't hunt
-            chaseNearestRabbit();
-        } else {
-        // Update the position based on the current direction and speed
-        	x += speed * directionX;
-        	y += speed * directionY;
-        	handleScreenEdges();
-        	maybeStop();
-        	position.setLocation(x, y);
-        	updatePosition();
-        }
-    }
-    
-    private void updatePosition() {
-        // Existing logic to update the fox's position
-        position.setLocation(x, y); // Update the position field
-        handleScreenEdges();
-        maybeStop();
-    }
-    
     public int getAge() {
         return age;
+    }
+    
+    public int getId() {
+        return id;
+    }
+    
+    public boolean isMale() {
+        return isMale;
+    }
+
+    public String getStatus() {
+        String sex = isMale ? "Male" : "Female";
+        return "Fox ID: " + id + ", Age: " + age + ", Size: " + getSizeByAge() + ", Sex: " + sex;
+    }
+    
+    // GROWTH
+    public void transitionAge(int targetAge) {
+        age = targetAge;  // Update the age
+        switch (targetAge) {
+            case 1:
+                speed = originalSpeed; // Speed for young foxes
+                scheduleTransition(2, Constants.TRANSITION_DELAY); // Schedule transition to adult after 30 seconds
+                break;
+            case 2:
+                speed = originalSpeed; // Speed for adult foxes
+                scheduleDeath(Constants.TRANSITION_DELAY); // Schedule death after 30 seconds as an adult
+                break;
+            case 3:
+                handleDeath(); // Die when reaching adult age
+                break;
+        }
+    }
+    
+    private class AgeTransitionTask extends TimerTask {
+        private Predator predator;
+        private int targetAge;
+
+        public AgeTransitionTask(Predator predator, int targetAge) {
+            this.predator = predator;
+            this.targetAge = targetAge;
+        }
+
+        @Override
+        public void run() {
+            predator.transitionAge(targetAge);
+        }
+    }
+    
+    private void scheduleTransition(int targetAge, int delay) {
+        timer.schedule(new AgeTransitionTask(this, targetAge), delay);
+    }
+    
+    private int getSizeByAge() {
+        switch (age) {
+            case 0:
+                return Constants.BABY_SIZE;
+            case 1:
+                return Constants.YOUNG_SIZE;
+            case 2:
+                return Constants.ADULT_SIZE;
+            default:
+                return Constants.ADULT_SIZE; // Default to adult size
+        }
+    }
+    
+    // DEATH
+    private class DeathTask extends TimerTask {
+        private Predator predator;
+
+        public DeathTask(Predator predator) {
+            this.predator = predator;
+        }
+
+        @Override
+        public void run() {
+            predator.handleDeath();
+        }
+    }
+
+    private void scheduleDeath(int delay) {
+        timer.schedule(new DeathTask(this), delay);
+    }
+
+    public void handleDeath() {
+        // Stop movements
+        directionX = 0;
+        directionY = 0;
+
+        // Replace the image with the dead image and schedule removal
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                // Replace the image with the dead image
+                foxImage = Constants.loadImage(Constants.DEAD_PREDATOR_IMAGE_PATH);
+
+                // Delay the image removal by 1 second
+                timer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        // Remove the image
+                        foxImage = null;
+                        // Remove fox from the simulation and array
+                        Main.removeFox(Predator.this);
+                    }
+                }, 1000);
+            }
+        }, Constants.IMAGE_REMOVAL_DELAY);
+    }
+       
+    // MOVEMENT
+    private void setRandomDirection() {
+        Random random = new Random();
+        directionX = random.nextInt(3) - 1; // Random value between -1 and 1
+        directionY = random.nextInt(3) - 1; // Random value between -1 and 1
+    }
+    
+    private void maybeStop() {
+        Random random = new Random();
+        int stopProbability = 1; // Adjust this probability as needed (e.g., 5% chance of stopping)
+
+        if (random.nextInt(100) < stopProbability) {
+            // Stop the movement
+            directionX = 0;
+            directionY = 0;
+            
+            // Schedule resuming movement after 2 seconds
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    // Resume normal movement
+                    setRandomDirection();
+                }
+            }, 1000);
+        }
     }
     
     private void handleScreenEdges() {
@@ -341,29 +225,183 @@ public class Predator extends JPanel {
         }
     }
     
-    private void maybeStop() {
-        Random random = new Random();
-        int stopProbability = 1; // Adjust this probability as needed (e.g., 5% chance of stopping)
+    private void moveFox(double speedFactor) {
+        x += speed * directionX * speedFactor;
+        y += speed * directionY * speedFactor;
+        handleScreenEdges();
+        maybeStop();
+        startHungerCountdown();
+        hunt(Main.getRabbits());
+    }
 
-        if (random.nextInt(100) < stopProbability) {
-            // Stop the movement
-            directionX = 0;
-            directionY = 0;
-            
-            // Schedule resuming movement after 2 seconds
-            timer.schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    // Resume normal movement
-                    setRandomDirection();
-                }
-            }, 1000);
-        }
+    public void moveBabyFox() {
+        moveFox(Constants.BABY_SPEED_FACTOR);
+    }
+
+    public void moveYoungFox() {
+        moveFox(Constants.YOUNG_SPEED_FACTOR);
+    }
+
+    public void move() {
+        moveFox(Constants.ADULT_SPEED_FACTOR);
     }
     
-    private void setRandomDirection() {
-        Random random = new Random();
-        directionX = random.nextInt(3) - 1; // Random value between -1 and 1
-        directionY = random.nextInt(3) - 1; // Random value between -1 and 1
+    // HUNT, EAT
+    public boolean isHungry() {
+        return hungry;
     }
+
+    public long getLastSuccessfulHuntTime() {
+        return lastSuccessfulHuntTime;
+    }
+    
+    public void setHungry(boolean hungry) {
+        this.hungry = hungry;
+    }
+    
+    private long lastSuccessfulHuntTime = System.currentTimeMillis();
+
+    private void startHungerCountdown() {
+        hungerTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                for (Predator fox : Main.getFoxes()) {
+                    if (fox != null) {
+                        if (!fox.isHungry()) {
+                            long currentTime = System.currentTimeMillis();
+                            long timeSinceLastHunt = currentTime - fox.getLastSuccessfulHuntTime();
+
+                            if (timeSinceLastHunt >= Constants.FOX_HUNGER_CYCLE) {
+                                fox.setHungry(true);
+                            }
+                        }
+                    }
+                }
+
+                for (Predator fox : Main.getFoxes()) {
+                    if (fox != null && fox.isHungry()) {
+                        fox.hunt(Main.getRabbits());
+                    }
+                }
+            }
+        }, 0, Constants.FOX_HUNGER_CYCLE);
+    }
+
+    // Add a method to renew the hunger countdown
+    private void renewHungerCountdown() {
+        hungerTimer.cancel();
+        hungerTimer = new Timer();
+        startHungerCountdown();
+    }
+    
+    public void hunt(List<Prey> rabbits) {
+        if (!hungry) {
+            // If not hungry, don't hunt
+            return;
+        }
+
+        Prey targetRabbit = findNearestRabbit(rabbits);
+
+        if (targetRabbit != null) {
+            double distance = Constants.calculateDistance(getX(), getY(), targetRabbit.getX(), targetRabbit.getY());
+
+            if (distance <= Constants.HUNTING_RANGE && distance < 1) {
+                int successRate = (getAge() == 2) ? Constants.ADULT_FOX_SUCCESSFUL_HUNT : Constants.YOUNG_FOX_SUCCESSFUL_HUNT;
+                if (Math.random() * 100 < successRate) {
+                    // Fox catches the rabbit based on success rate
+                    targetRabbit.setEaten(true);
+                    // Stop all movements
+                    directionX = 0;
+                    directionY = 0;
+                    
+                    // Set the last successful hunt time
+                    lastSuccessfulHuntTime = System.currentTimeMillis();
+
+                    // Schedule the eat method after a delay
+                    Timer eatTimer = new Timer();
+                    eatTimer.schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            eat(targetRabbit);
+                            hungry = false; // Reset hunger state after eating
+                            renewHungerCountdown(); // Stop the hunger countdown
+                        }
+                    }, 2000); // Delay of 2 seconds
+                } else {
+                    // Rabbit escaped, stop chasing
+                    //directionX = 0;
+                    //directionY = 0;
+
+                    // Add code to go back to default movement based on fox's age
+                    switch (getAge()) {
+                        case 0:
+                            moveBabyFox(); // Implement moveBabyFox method for baby fox movement
+                            break;
+                        case 1:
+                            moveYoungFox(); // Implement moveYoungFox method for young fox movement
+                            break;
+                        case 2:
+                            move(); // Implement move method for adult fox movement
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+    private void eat(Prey rabbit) {
+        // Remove all details of the eaten rabbit
+        // removeEatenRabbit(rabbit);
+
+        // Stop all movements of the eaten rabbit
+        rabbit.stopMovements();
+
+        // Resume normal movement for the fox
+        switch (getAge()) {
+            case 0:
+                moveBabyFox(); // Implement moveBabyFox method for baby fox movement
+                break;
+            case 1:
+                moveYoungFox(); // Implement moveYoungFox method for young fox movement
+                break;
+            case 2:
+                move(); // Implement move method for adult fox movement
+                break;
+            // Add additional cases if needed for other age values
+        }
+
+        // Continue movement or perform other actions after a successful hunt
+        hungry = false; // Reset hunger state
+        renewHungerCountdown(); // Reset hunger countdown
+    }
+
+	// Add a method to find the nearest rabbit within the hunting range
+    private Prey findNearestRabbit(List<Prey> rabbits) {
+        Prey nearestRabbit = null;
+        double minDistance = Double.MAX_VALUE;
+
+        for (Prey rabbit : rabbits) {
+            double distance = Constants.calculateDistance(getX(), getY(), rabbit.getX(), rabbit.getY());
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestRabbit = rabbit;
+            }
+        }
+
+        return nearestRabbit;
+    }
+    
+    @Override
+    public void draw(Graphics g) {
+        int size = getSizeByAge();
+        if (hungry) {
+            // Draw a red border around the fox only when it is currently hungry
+            g.setColor(Color.RED);
+            g.drawRect(x - 1, y - 1, size + 1, size + 1);
+        }
+
+        // Draw the fox image
+        g.drawImage(foxImage, x, y, size, size, this);
+    }
+
 }

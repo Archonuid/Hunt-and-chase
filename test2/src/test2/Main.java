@@ -7,42 +7,35 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Main extends JFrame implements PredatorActionListener {
-    private static final long serialVersionUID = 1L;
-    private static int nextId = 1;
-    private List<AnimalRecord> animalRecords;
+public class Main extends JFrame {
     private Plant grassField;
-    private List<Prey> rabbits;
-    private List<Predator> foxes;
+    private static List<Prey> rabbits = new ArrayList<>();
+    private static List<Predator> foxes = new ArrayList<>();
     private int screenHeight = 600; // Replace 600 with your actual screen height
     private int screenWidth = 800; // Replace 800 with your actual screen width
+    public static List<Prey> getRabbits() {
+        return rabbits;
+    }
+    public static List<Predator> getFoxes() {
+        return foxes;
+    }
 
     public Main() {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setTitle("Planet Life Simulation");
         setSize(screenWidth, screenHeight);
-        setLayout(null); // Using null layout for absolute positioning
 
-        animalRecords = new ArrayList<>();
+        // Get the actual screen size
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        int screenWidth = (int) screenSize.getWidth();
+        int screenHeight = (int) screenSize.getHeight();
+
         grassField = new Plant();
         rabbits = new ArrayList<>();
         foxes = new ArrayList<>();
 
-        spawnRabbits();
-        spawnFoxes();
-
-        new Timer(100, new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                moveRabbits();
-                moveFoxes();
-                repaint();
-            }
-        }).start();
-    }
-    
-    private void spawnRabbits() {
-    	for (int i = 0; i < 12; i++) {
+     // Spawn 12 rabbits
+        for (int i = 0; i < 12; i++) {
             int age = (int) (Math.random() * 3); // Randomly assign age (excluding adult for initial spawn)
             int size;
             int speed;
@@ -63,16 +56,16 @@ public class Main extends JFrame implements PredatorActionListener {
             int startY = (int) (Math.random() * screenHeight);
             int directionX = Math.random() < 0.5 ? -1 : 1; // Random direction
             int directionY = Math.random() < 0.5 ? -1 : 1;
-
-            // Create a new rabbit and add it to the list
-            Prey rabbit = new Prey(nextId, startX, startY, speed, directionX, directionY, this);
-            rabbit.transitionAge(age);
+            
+            // Randomly assign sex (true for male, false for female)
+            boolean isMale = Math.random() < 0.5;
+            
+            Prey rabbit = new Prey(startX, startY, speed, directionX, directionY, isMale);
+            rabbit.transitionAge(age); // Set the age
             rabbits.add(rabbit);
-            animalRecords.add(new AnimalRecord(nextId++, age, "Rabbit", new Point(startX, startY)));
         }
-    }
-    
-    private void spawnFoxes() {
+
+     // Spawn 4 foxes
         for (int i = 0; i < 4; i++) {
             int age = (int) (Math.random() * 3); // Randomly assign age (excluding adult for initial spawn)
             int size;
@@ -94,13 +87,24 @@ public class Main extends JFrame implements PredatorActionListener {
             int startY = (int) (Math.random() * screenHeight);
             int directionX = Math.random() < 0.5 ? -1 : 1; // Random direction
             int directionY = Math.random() < 0.5 ? -1 : 1;
+            
+            // Randomly assign sex (true for male, false for female)
+            boolean isMale = Math.random() < 0.5;
 
-            // Pass 'this' as an argument to the Predator constructor
-            Predator fox = new Predator(startX, startY, speed, directionX, directionY, this);
-            fox.transitionAge(age);
+            Predator fox = new Predator(startX, startY, speed, directionX, directionY, isMale);
+            fox.transitionAge(age); // Set the age
             foxes.add(fox);
-            animalRecords.add(new AnimalRecord(nextId++, age, "Fox", new Point(startX, startY)));
         }
+
+        // Start the simulation loop
+        new Timer(100, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                moveRabbits(); // Adjust rabbits' positions
+                moveFoxes(); // Adjust foxes' positions
+                repaint(); // Trigger repaint to update the graphics
+            }
+        }).start();
     }
 
     private void moveRabbits() {
@@ -135,46 +139,56 @@ public class Main extends JFrame implements PredatorActionListener {
                         fox.move();
                         break;
                 }
+
+                huntAndEat(fox); // Check for prey and perform hunting/eating actions
             }
         }
+    }
+
+    private void huntAndEat(Predator fox) {
+        List<Prey> nearbyRabbits = findNearbyPrey(fox, rabbits);
+
+        if (!nearbyRabbits.isEmpty()) {
+            fox.hunt(nearbyRabbits); // The hunt method in the Predator class will handle the hunting logic
+        }
+    }
+
+    private List<Prey> findNearbyPrey(Predator fox, List<Prey> potentialPrey) {
+        List<Prey> nearbyPrey = new ArrayList<>();
+
+        for (Prey prey : potentialPrey) {
+            double distance = Constants.calculateDistance(fox.getX(), fox.getY(), prey.getX(), prey.getY());
+            if (distance <= Constants.HUNTING_RANGE) {
+                nearbyPrey.add(prey);
+            }
+        }
+
+        return nearbyPrey;
     }
 
     @Override
     public void paint(Graphics g) {
         super.paint(g);
         grassField.draw(g, getWidth(), getHeight());
-        // Note: Individual drawing of rabbits and foxes may not be needed
-        // if they are added to the JFrame and manage their own painting.
-    }
-
-    @Override
-    public void onRabbitCaught(int rabbitId) {
-        rabbits.removeIf(rabbit -> rabbit.getId() == rabbitId);
-        animalRecords.removeIf(record -> record.getId() == rabbitId && record.getType().equals("Rabbit"));
-    }
-
-    public List<AnimalRecord> getAnimalRecords() {
-        return animalRecords;
+        for (Prey rabbit : rabbits) {
+            rabbit.draw(g);
+        }
+        for (Predator fox : foxes) {
+            fox.draw(g);
+        }
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new Main().setVisible(true));
+        SwingUtilities.invokeLater(() -> new Main().setVisible(true)); // LAMBDA function, what does it do
     }
     
-    public void calculateDistances() {
-        for (AnimalRecord a : animalRecords) {
-            if (a.getType().equals("Rabbit")) {
-                for (AnimalRecord b : animalRecords) {
-                    if (b.getType().equals("Fox")) {
-                        double distance = a.getPosition().distance(b.getPosition());
-                        // Use this distance as needed for logic
-                    }
-                }
-            }
-        }
+    // Method to remove a rabbit from the list
+    public static void removeRabbit(Prey rabbit) {
+        rabbits.remove(rabbit);
     }
-    
-    public interface PredatorActionListener {
-        void onRabbitCaught(int rabbitId);
+
+    // Method to remove a rabbit from the list
+    public static void removeFox(Predator fox) {
+        foxes.remove(fox);
     }
 }
