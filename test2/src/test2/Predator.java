@@ -334,7 +334,6 @@ public class Predator extends JPanel implements Drawable {
 
     private void chaseTarget(Prey targetRabbit) {
         // Calculate the angle between the fox and the rabbit
-        double chaseSpeedFactor = 1.6; // Adjust the value as needed
         double angle = Math.atan2(targetRabbit.getY() - getY(), targetRabbit.getX() - getX());
 
         // Calculate the new direction based on the angle
@@ -342,8 +341,8 @@ public class Predator extends JPanel implements Drawable {
         directionY = (int) Math.round(Math.sin(angle));
 
         // Move the fox to close the distance at an increased speed
-        x += chaseSpeedFactor * speed * directionX;
-        y += chaseSpeedFactor * speed * directionY;
+        x += Constants.chaseSpeedFactor * speed * directionX;
+        y += Constants.chaseSpeedFactor * speed * directionY;
 
         // Handle screen edges to prevent the fox from going off-screen
         handleScreenEdges();

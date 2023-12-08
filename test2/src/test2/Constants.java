@@ -33,6 +33,8 @@ public class Constants {
     public static final double BABY_SPEED_FACTOR = 0.35;
     public static final double YOUNG_SPEED_FACTOR = 0.35;
     public static final double ADULT_SPEED_FACTOR = 0.5;
+    public static final double chaseSpeedFactor = 1.6;
+    public static final double escapeSpeedFactor = 1.6;
 
     // Common image removal delay
     public static final int IMAGE_REMOVAL_DELAY = 2000;
@@ -41,14 +43,18 @@ public class Constants {
     public static int lastRabbitId = 0;
     public static int lastFoxId = 0;
     
-    public static final int FOX_HUNGER_CYCLE = 5000; // Fox gets hungry every 20 seconds
+    public static final int FOX_HUNGER_CYCLE = 10000; // Fox gets hungry every 20 seconds
     public static final int HUNTING_RANGE = 100; // Foxes hunt within 30px range
-    public static final int ADULT_FOX_SUCCESSFUL_HUNT = 80; // 95% success rate for adult foxes
-    public static final int YOUNG_FOX_SUCCESSFUL_HUNT = 70; // 90% success rate for young foxes
+    public static final int ADULT_FOX_SUCCESSFUL_HUNT = 70; // 95% success rate for adult foxes
+    public static final int YOUNG_FOX_SUCCESSFUL_HUNT = 50; // 90% success rate for young foxes
     public static final int FOX_DEATH_BY_HUNGER = 50000; // Fox dies if hungry for more than 45 seconds
     public static final int ESCAPE_RANGE = 50; // Rabbits can detect foxes within 35px
     public static final int FOX_HUNT_TIMEOUT_RANGE = 80; // Fox stops chasing if rabbit is more than 60px away
 
+    public static final int REPRODUCTION_DISTANCE = 300; //Distance between mates to mingle
+    public static final int MATING_CYCLE = 5000;
+    public static final int MATE_PROXIMITY = 1;
+    
     public static double calculateDistance(int x1, int y1, int x2, int y2) {
         return Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
     }

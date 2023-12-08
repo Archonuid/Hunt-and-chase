@@ -120,11 +120,29 @@ public class Main extends JFrame {
                         break;
                     case 2:
                         rabbit.move();
+                        if (rabbit.getAge() == 2 && !rabbit.isMating()) {
+                            initiateReproduction(rabbit);
+                        }
                         break;
                 }
             }
         }
     }
+
+    private void initiateReproduction(Prey rabbit) {
+        if (rabbit.isHungry() || rabbit.isEaten()) {
+            return; // Don't reproduce if hungry or eaten
+        }
+
+        long currentTime = System.currentTimeMillis();
+        long timeSinceLastMating = currentTime - rabbit.getLastSuccessfulMatingTime();
+
+        if (timeSinceLastMating >= Constants.MATING_CYCLE) {
+            rabbit.setMating(true);
+            rabbit.mates();
+        }
+    }
+
 
     private void moveFoxes() {
         for (Predator fox : foxes) {
@@ -191,5 +209,9 @@ public class Main extends JFrame {
     // Method to remove a rabbit from the list
     public static void removeFox(Predator fox) {
         foxes.remove(fox);
+    }
+    
+    public static void addRabbit(Prey rabbit) {
+        rabbits.add(rabbit);
     }
 }
