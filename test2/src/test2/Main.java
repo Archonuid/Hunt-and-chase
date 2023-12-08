@@ -36,7 +36,7 @@ public class Main extends JFrame {
         foxes = Collections.synchronizedList(new ArrayList<>());
 
      // Spawn 12 rabbits
-        for (int i = 0; i < 12; i++) {
+        for (int i = 0; i < 20; i++) {
             int age = (int) (Math.random() * 3); // Randomly assign age (excluding adult for initial spawn)
             int size;
             int speed;
@@ -67,7 +67,7 @@ public class Main extends JFrame {
         }
 
      // Spawn 4 foxes
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 10; i++) {
             int age = (int) (Math.random() * 3); // Randomly assign age (excluding adult for initial spawn)
             int size;
             int speed;
@@ -156,11 +156,25 @@ public class Main extends JFrame {
                         break;
                     case 2:
                         fox.move();
+                        if (fox.getAge() == 2 && !fox.isMating()) {
+                            initiateFoxReproduction(fox);
+                        }
                         break;
                 }
-
-                huntAndEat(fox); // Check for prey and perform hunting/eating actions
+                huntAndEat(fox);
             }
+        }
+    }
+
+    private void initiateFoxReproduction(Predator fox) {
+        if (fox.isHungry() || fox.isAlive()) {
+            return; // Don't reproduce if hungry or eaten
+        }
+        long currentTime = System.currentTimeMillis();
+        long timeSinceLastMating = currentTime - fox.getLastSuccessfulMatingTime();
+        if (timeSinceLastMating >= Constants.MATING_CYCLE) {
+            fox.setMating(true);
+            fox.mates();
         }
     }
 
@@ -213,5 +227,9 @@ public class Main extends JFrame {
     
     public static void addRabbit(Prey rabbit) {
         rabbits.add(rabbit);
+    }
+    
+    public static void addFox(Predator fox) {
+        foxes.add(fox);
     }
 }

@@ -6,11 +6,10 @@ import java.awt.Image;
 import java.util.Timer;
 import java.util.TimerTask;
 import javax.swing.JPanel;
+import javax.swing.SwingWorker;
 import java.util.Random;
 import java.awt.Color;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 
 public class Predator extends JPanel implements Drawable {
     private int age;  // 0 for baby, 1 for young, 2 for adult
@@ -27,6 +26,11 @@ public class Predator extends JPanel implements Drawable {
     private boolean isMale; // true for male, false for female
     private TimerTask hungerTask;
     private TimerTask deathTask;
+    private long lastSuccessfulMatingTime = System.currentTimeMillis();
+    private Timer matingTimer = new Timer();
+    private boolean isMating = false;
+    private static Main mainInstance;
+    private boolean isAlive = true;
 
     public Predator(int startX, int startY, int initialSpeed, int initialDirectionX, int initialDirectionY, boolean isMale) {
         x = startX;
@@ -76,6 +80,10 @@ public class Predator extends JPanel implements Drawable {
     
     public boolean isMale() {
         return isMale;
+    }
+    
+    public boolean isFemale() {
+        return !isMale();
     }
 
     public String getStatus() {
@@ -173,7 +181,8 @@ public class Predator extends JPanel implements Drawable {
                     @Override
                     public void run() {
                         // Remove the image
-                        foxImage = null;   
+                        foxImage = null;  
+                        isAlive = false;
                     }
                 }, 1000);
             }
@@ -271,6 +280,12 @@ public class Predator extends JPanel implements Drawable {
 
     public void move() {
         moveFox(Constants.ADULT_SPEED_FACTOR);
+    }
+    
+    public void stopMovements() {
+        // Set both directionX and directionY to 0 to stop movement
+        this.directionX = 0;
+        this.directionY = 0;
     }
     
     // CHASE, HUNT, EAT
@@ -397,6 +412,149 @@ public class Predator extends JPanel implements Drawable {
         }
 
         return nearestRabbit;
+    }
+    
+    // REPRODUCTION
+    public long getLastSuccessfulMatingTime() {
+        return lastSuccessfulMatingTime;
+    }
+    
+    public boolean isMating() {
+        return isMating;
+    }
+
+    public void setMating(boolean mating) {
+        isMating = mating;
+    }
+    
+    public int getSpeed() {
+        return Constants.ADULT_SIZE;
+    }
+    
+    public static Main getMainInstance() {
+        return mainInstance;
+    }
+    
+    public boolean isAlive() {
+        return isAlive;
+    }
+
+    public void setAlive(boolean isAlive) {
+        this.isAlive = isAlive;
+    }
+    
+    private void startMatingCountdown() {
+        matingTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                for (Predator fox : Main.getFoxes()) {
+                    if (fox != null && !fox.isHungry() && !fox.isAlive()) {
+                        long currentTime = System.currentTimeMillis();
+                        long timeSinceLastMating = currentTime - fox.getLastSuccessfulMatingTime();
+
+                        if (timeSinceLastMating >= Constants.MATING_CYCLE) {
+                            fox.mates();
+                        }
+                    }
+                }
+            }
+        }, 0, Constants.MATING_CYCLE);
+    }
+
+    private void renewMatingCycle() {
+        matingTimer.cancel();
+        matingTimer = new Timer();
+        startMatingCountdown();
+    }
+    
+    private Predator findMate() {
+        List<Predator> foxes = Main.getFoxes(); 
+        Predator nearestMate = null;
+        double nearestDistance = Double.MAX_VALUE;
+
+        for (Predator fox : foxes) {
+            if (fox != this && fox.isMale() != this.isMale() && !fox.isAlive() && fox.getAge() == 2 && !fox.isMating()) {
+                double distance = Constants.calculateDistance(getX(), getY(), fox.getX(), fox.getY());
+                if (distance <= Constants.REPRODUCTION_DISTANCE && distance < nearestDistance) {
+                    nearestMate = fox;
+                    nearestDistance = distance;
+                }
+            }
+        }
+        return nearestMate;
+    }
+
+    private void moveTowardsMate(Predator mate) {
+        if (this.isMale() && mate.isFemale()) {
+            double angle = Math.atan2(mate.getY() - getY(), mate.getX() - getX());
+            directionX = (int) Math.round(Math.cos(angle));
+            directionY = (int) Math.round(Math.sin(angle));
+            x += speed * directionX;
+            y += speed * directionY;
+
+            double distance = Constants.calculateDistance(getX(), getY(), mate.getX(), mate.getY());
+            if (distance <= Constants.MATE_PROXIMITY) {
+                x = mate.getX();
+                y = mate.getY();
+                directionX = 0;
+                directionY = 0;
+            }
+            handleScreenEdges();
+        }
+    }
+
+    public void mates() {
+        Predator mate = findMate();
+        if (mate != null) {
+            moveTowardsMate(mate);
+            mate.moveTowardsMate(this);
+            stopMovements();
+            mate.stopMovements();
+
+            SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+                @Override
+                protected Void doInBackground() throws Exception {
+                    Thread.sleep(3000);
+                    return null;
+                }
+
+                @Override
+                protected void done() {
+                    setRandomDirection();
+                    mate.setRandomDirection();
+                    Predator newborn = createNewborn(Predator.this);
+                    lastSuccessfulMatingTime = System.currentTimeMillis();
+                    mate.lastSuccessfulMatingTime = System.currentTimeMillis();
+                    renewMatingCycle();
+                    mate.renewMatingCycle();
+                    setMating(false);
+                    mate.setMating(false);
+                }
+            };
+            worker.execute();
+        }
+    }
+
+    private void createNewborns(Predator parent) {
+        int numberOfNewborns = new Random().nextInt(6) + 1;  // 1-6 newborns
+        for (int i = 0; i < numberOfNewborns; i++) {
+            int startX = parent.getX();
+            int startY = parent.getY();
+            int initialSpeed = parent.getSpeed();
+            int initialDirectionX = 0;
+            int initialDirectionY = 0;
+            boolean isMale = Math.random() < 0.5;
+
+            Predator newborn = new Predator(startX, startY, initialSpeed, initialDirectionX, initialDirectionY, isMale);
+            newborn.transitionAge(0);
+            Main.addFox(newborn);
+            newborn.scheduleTransition(1, Constants.TRANSITION_DELAY);
+        }
+    }
+
+    private Predator createNewborn(Predator parent) {
+        createNewborns(parent);
+        return Main.getFoxes().get(Main.getFoxes().size() - 1);
     }
     
     @Override
