@@ -35,7 +35,7 @@ public class Main extends JFrame {
         foxes = new ArrayList<>();
 
      // Spawn 12 rabbits
-        for (int i = 0; i < 25; i++) {
+        for (int i = 0; i < 15; i++) {
             int age = (int) (Math.random() * 3); // Randomly assign age (excluding adult for initial spawn)
             int size;
             int speed;
@@ -66,7 +66,7 @@ public class Main extends JFrame {
         }
 
      // Spawn 4 foxes
-        for (int i = 0; i < 15; i++) {
+        for (int i = 0; i < 8; i++) {
             int age = (int) (Math.random() * 3); // Randomly assign age (excluding adult for initial spawn)
             int size;
             int speed;
@@ -102,6 +102,7 @@ public class Main extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 moveRabbits(); // Adjust rabbits' positions
                 moveFoxes(); // Adjust foxes' positions
+                handleMatingSeason();
                 repaint(); // Trigger repaint to update the graphics
             }
         }).start();

@@ -436,7 +436,8 @@ public class Predator extends JPanel implements Drawable {
         int babyY = mate.getY();
 
         // Randomly decide the number of baby foxes to spawn (between 1 and 5)
-        int numberOfBabyFoxes = (int) (Math.random() * 5) + 1;
+        Random random = new Random();
+        int numberOfBabyFoxes = random.nextInt(6); // Generates a random number between 0 (inclusive) and 9 (exclusive)
 
         for (int i = 0; i < numberOfBabyFoxes; i++) {
             // Randomly decide the sex of the baby fox
