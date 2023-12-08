@@ -3,12 +3,12 @@ package test2;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Image;
+import java.awt.Color;
 import java.util.Timer;
 import java.util.TimerTask;
 import javax.swing.JPanel;
 import java.util.Random;
 import java.util.List;
-import java.awt.Color;
 
 public class Prey extends JPanel implements Drawable, PreyInterface {
     private int age;  // 0 for baby, 1 for young, 2 for adult
@@ -266,7 +266,7 @@ public class Prey extends JPanel implements Drawable, PreyInterface {
         moveWithFactor(Constants.ADULT_SPEED_FACTOR);
     }
     
-    // Add a method to detect nearby foxes within the escape range
+    // ESCAPE
     private Predator findNearestFox(List<Predator> foxes) {
         if (foxes == null || foxes.isEmpty()) {
             return null; // No foxes available, return null
@@ -306,6 +306,14 @@ public class Prey extends JPanel implements Drawable, PreyInterface {
         // Adjust the direction to move away from the fox
         directionX = (int) Math.cos(angle);
         directionY = (int) Math.sin(angle);
+
+        // Increase the speed for escape
+        double escapeSpeedFactor = 1.6; // Adjust the value as needed
+        x += escapeSpeedFactor * speed * directionX;
+        y += escapeSpeedFactor * speed * directionY;
+
+        // Ensure the rabbit stays within the screen edges
+        handleScreenEdges();
     }
 
     private void outOfRange(Predator fox) {
@@ -322,13 +330,27 @@ public class Prey extends JPanel implements Drawable, PreyInterface {
     @Override
     public void draw(Graphics g) {
         int size = getSizeByAge();
+
         if (isEaten) {
             // Draw the image for a dead prey
             g.drawImage(Constants.loadImage(Constants.DEAD_PREY_IMAGE_PATH), x, y, size, size, this);
         } else {
             // Draw the regular prey image
-            g.drawImage(rabbitImage, x, y, size, size, this);
+            if (isMale) {
+                // Draw blue border for male rabbits
+                g.setColor(Color.BLUE);
+                g.drawRect(x, y, size, size);
+                g.setColor(Color.BLACK); // Reset color for the image
+                g.drawImage(rabbitImage, x + 1, y + 1, size - 2, size - 2, this);
+            } else {
+                // Draw pink color for female rabbits
+                g.setColor(Color.PINK);
+                g.fillRect(x, y, size, size);
+                g.setColor(Color.BLACK); // Reset color for the image
+                g.drawImage(rabbitImage, x + 1, y + 1, size - 2, size - 2, this);
+            }
         }
     }
+
 
 }

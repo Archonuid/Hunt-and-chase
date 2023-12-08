@@ -25,6 +25,8 @@ public class Predator extends JPanel implements Drawable {
     private boolean hungry = false;
     private Timer hungerTimer;
     private boolean isMale; // true for male, false for female
+    private TimerTask hungerTask;
+    private TimerTask deathTask;
 
     public Predator(int startX, int startY, int initialSpeed, int initialDirectionX, int initialDirectionY, boolean isMale) {
         x = startX;
@@ -55,7 +57,7 @@ public class Predator extends JPanel implements Drawable {
         return y;
     }
 
-    // Additional methods for setting x and y coordinates
+    // methods for setting x and y coordinates
     public void setX(int x) {
         this.x = x;
     }
@@ -153,6 +155,11 @@ public class Predator extends JPanel implements Drawable {
         // Stop movements
         directionX = 0;
         directionY = 0;
+        cancelHungerTimer();
+        cancelDeathTimer();
+        
+        // Remove fox from the simulation and array
+        Main.removeFox(Predator.this);
 
         // Replace the image with the dead image and schedule removal
         timer.schedule(new TimerTask() {
@@ -166,13 +173,31 @@ public class Predator extends JPanel implements Drawable {
                     @Override
                     public void run() {
                         // Remove the image
-                        foxImage = null;
-                        // Remove fox from the simulation and array
-                        Main.removeFox(Predator.this);
+                        foxImage = null;   
                     }
                 }, 1000);
             }
         }, Constants.IMAGE_REMOVAL_DELAY);
+    }
+    
+    private void cancelHungerTimer() {
+        if (hungerTask != null) {
+            hungerTask.cancel();
+        }
+    }
+    
+    private void cancelDeathTimer() {
+        if (deathTask != null) {
+            deathTask.cancel();
+        }
+        
+        directionX = 0;
+        directionY = 0;
+
+        // Additional cleanup or handling associated with death
+        cancelHungerTimer();
+        hungry = false;
+        lastSuccessfulHuntTime = 0;
     }
        
     // MOVEMENT
@@ -207,7 +232,7 @@ public class Predator extends JPanel implements Drawable {
         int titleBarHeight = 10;
         int taskbarHeight = 10;
 
-        // Adjust screen height by subtracting the heights of title bar and taskbar
+        // Adjusting screen height by subtracting the heights of title bar and taskbar
         int adjustedScreenHeight = screenSize.height - titleBarHeight - taskbarHeight;
         // Check if the predator has reached the screen edges
         if (x < 0) {
@@ -309,7 +334,7 @@ public class Predator extends JPanel implements Drawable {
 
     private void chaseTarget(Prey targetRabbit) {
         // Calculate the angle between the fox and the rabbit
-        double chaseSpeedFactor = 2.0; // Adjust the value as needed
+        double chaseSpeedFactor = 1.6; // Adjust the value as needed
         double angle = Math.atan2(targetRabbit.getY() - getY(), targetRabbit.getX() - getX());
 
         // Calculate the new direction based on the angle
@@ -378,13 +403,26 @@ public class Predator extends JPanel implements Drawable {
     @Override
     public void draw(Graphics g) {
         int size = getSizeByAge();
-        if (hungry) {
-            // Draw a red border around the fox only when it is currently hungry
-            g.setColor(Color.RED);
-            g.drawRect(x - 1, y - 1, size + 1, size + 1);
-        }
 
-        // Draw the fox image
-        g.drawImage(foxImage, x, y, size, size, this);
+        // Draw the fox image if it's not null
+        if (foxImage != null) {
+            // Add a pink border for female foxes
+            if (!isMale()) {
+                g.setColor(Color.PINK);
+                g.drawRect(x - 1, y - 1, size + 1, size + 1);
+            } else {
+                // Add a blue border for male foxes
+                g.setColor(Color.BLUE);
+                g.drawRect(x - 1, y - 1, size + 1, size + 1);
+            }
+
+            // Draw a red border around the fox only when it is currently hungry
+            if (hungry) {
+                g.setColor(Color.RED);
+                g.drawRect(x - 1, y - 1, size + 1, size + 1);
+            }
+
+            g.drawImage(foxImage, x, y, size, size, this);
+        }
     }
 }
