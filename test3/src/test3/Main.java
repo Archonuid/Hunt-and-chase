@@ -101,7 +101,7 @@ public class Main extends JFrame {
         foxes.addAll(newFoxes);
 
         // Start the simulation loop
-        new Timer(10, new ActionListener() {
+        new Timer(150, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 moveRabbits(); // Adjust rabbits' positions
@@ -170,7 +170,7 @@ public class Main extends JFrame {
     }
 
     private void initiateFoxReproduction(Predator fox) {
-        if (fox.isHungry() || fox.isAlive()) {
+        if (fox.isHungry() || !fox.isAlive()) {
             return; // Don't reproduce if hungry or eaten
         }
         long currentTime = System.currentTimeMillis();
