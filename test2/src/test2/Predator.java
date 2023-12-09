@@ -10,6 +10,7 @@ import javax.swing.SwingWorker;
 import java.util.Random;
 import java.awt.Color;
 import java.util.List;
+import java.awt.image.BufferedImage;
 
 public class Predator extends JPanel implements Drawable {
     private int age;  // 0 for baby, 1 for young, 2 for adult
@@ -101,7 +102,7 @@ public class Predator extends JPanel implements Drawable {
                 break;
             case 2:
                 speed = originalSpeed; // Speed for adult foxes
-                scheduleDeath(Constants.TRANSITION_DELAY); // Schedule death after 30 seconds as an adult
+                scheduleDeath(Constants.DEATH_DELAY); // Schedule death after 30 seconds as an adult
                 break;
             case 3:
                 handleDeath(); // Die when reaching adult age
@@ -164,7 +165,7 @@ public class Predator extends JPanel implements Drawable {
         directionX = 0;
         directionY = 0;
         cancelHungerTimer();
-        cancelDeathTimer();
+        //cancelDeathTimer();
         
         // Remove fox from the simulation and array
         Main.removeFox(Predator.this);
@@ -473,7 +474,7 @@ public class Predator extends JPanel implements Drawable {
         double nearestDistance = Double.MAX_VALUE;
 
         for (Predator fox : foxes) {
-            if (fox != this && fox.isMale() != this.isMale() && !fox.isAlive() && fox.getAge() == 2 && !fox.isMating()) {
+            if (fox != this && fox.isMale() != this.isMale() && fox.isAlive() && fox.getAge() == 2 && !fox.isMating()) {
                 double distance = Constants.calculateDistance(getX(), getY(), fox.getX(), fox.getY());
                 if (distance <= Constants.REPRODUCTION_DISTANCE && distance < nearestDistance) {
                     nearestMate = fox;
@@ -536,7 +537,7 @@ public class Predator extends JPanel implements Drawable {
     }
 
     private void createNewborns(Predator parent) {
-        int numberOfNewborns = new Random().nextInt(6) + 1;  // 1-6 newborns
+        int numberOfNewborns = new Random().nextInt(5) + 1;  // 1-6 newborns
         for (int i = 0; i < numberOfNewborns; i++) {
             int startX = parent.getX();
             int startY = parent.getY();

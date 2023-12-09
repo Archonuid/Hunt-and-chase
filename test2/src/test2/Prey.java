@@ -104,7 +104,7 @@ public class Prey extends JPanel implements Drawable, PreyInterface {
                 break;
             case 2:
                 speed = originalSpeed; // Speed for adult foxes
-                scheduleDeath(Constants.TRANSITION_DELAY); // Schedule death after 30 seconds as an adult
+                scheduleDeath(Constants.DEATH_DELAY); // Schedule death after 30 seconds as an adult
                 break;
             case 3:
                 handleDeath(); // Die when reaching adult age
@@ -194,7 +194,7 @@ public class Prey extends JPanel implements Drawable, PreyInterface {
         directionX = 0;
         directionY = 0;
         // Additional logic if needed
-        handleDeath();
+        //handleDeath();
     }
     
     private void setRandomDirection() {
@@ -485,7 +485,7 @@ public class Prey extends JPanel implements Drawable, PreyInterface {
     
     private void createNewborns(Prey parent) {
         // Generate a random number of newborns between 1 and 8
-        int numberOfNewborns = (int) (Math.random() * 8) + 1;
+        int numberOfNewborns = (int) (Math.random() * 2) + 1;
 
         // Create and add each newborn to the existing array
         for (int i = 0; i < numberOfNewborns; i++) {

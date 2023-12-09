@@ -36,7 +36,7 @@ public class Main extends JFrame {
         foxes = Collections.synchronizedList(new ArrayList<>());
 
      // Spawn 12 rabbits
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 10; i++) {
             int age = (int) (Math.random() * 3); // Randomly assign age (excluding adult for initial spawn)
             int size;
             int speed;
@@ -67,7 +67,8 @@ public class Main extends JFrame {
         }
 
      // Spawn 4 foxes
-        for (int i = 0; i < 10; i++) {
+        List<Predator> newFoxes = new ArrayList<>();
+        for (int j = 0; j < 7; j++) {
             int age = (int) (Math.random() * 3); // Randomly assign age (excluding adult for initial spawn)
             int size;
             int speed;
@@ -91,14 +92,16 @@ public class Main extends JFrame {
             
             // Randomly assign sex (true for male, false for female)
             boolean isMale = Math.random() < 0.5;
-
+            
             Predator fox = new Predator(startX, startY, speed, directionX, directionY, isMale);
             fox.transitionAge(age); // Set the age
-            foxes.add(fox);
+            newFoxes.add(fox);
         }
+        foxes.clear();
+        foxes.addAll(newFoxes);
 
         // Start the simulation loop
-        new Timer(100, new ActionListener() {
+        new Timer(150, new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 moveRabbits(); // Adjust rabbits' positions
@@ -143,7 +146,6 @@ public class Main extends JFrame {
         }
     }
 
-
     private void moveFoxes() {
         for (Predator fox : foxes) {
             if (fox != null) {
@@ -167,7 +169,7 @@ public class Main extends JFrame {
     }
 
     private void initiateFoxReproduction(Predator fox) {
-        if (fox.isHungry() || fox.isAlive()) {
+        if (fox.isHungry() || !fox.isAlive()) {
             return; // Don't reproduce if hungry or eaten
         }
         long currentTime = System.currentTimeMillis();
