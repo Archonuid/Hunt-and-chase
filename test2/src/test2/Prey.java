@@ -455,7 +455,7 @@ public class Prey extends JPanel implements Drawable, PreyInterface {
                 matingSuccessRate *= 0.2;  // Reduce by additional 20%
             }
             if (totalRabbits > 250) {
-                matingSuccessRate *= 0.1 + Math.random() * 0.05;  // Set success rate between 5-10%
+                matingSuccessRate *= 0.05 + Math.random() * 0.00;  // Set success rate between 5-10%
             }
 
             // Check if mating is successful based on the adjusted success rate

@@ -518,16 +518,16 @@ public class Predator extends JPanel implements Drawable {
                 matingSuccessRate *= 0.8;  // Reduce by 20%
             }
             if (totalFoxes > 100) {
-                matingSuccessRate *= 0.5;  // Reduce by additional 20%
+                matingSuccessRate *= 0.4;  // Reduce by additional 20%
             }
             if (totalFoxes > 150) {
-                matingSuccessRate *= 0.4;  // Reduce by additional 20%
+                matingSuccessRate *= 0.3;  // Reduce by additional 20%
             }
             if (totalFoxes > 200) {
-                matingSuccessRate *= 0.4;  // Reduce by additional 20%
+                matingSuccessRate *= 0.1;  // Reduce by additional 20%
             }
             if (totalFoxes > 250) {
-                matingSuccessRate *= 0.1 + Math.random() * 0.05;  // Set success rate between 5-10%
+                matingSuccessRate *= 0.05 + Math.random() * 0.0;  // Set success rate between 5-10%
             }
 
             // Check if mating is successful based on the adjusted success rate

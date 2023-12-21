@@ -45,7 +45,7 @@ public class Constants {
     public static int lastRabbitId = 0;
     public static int lastFoxId = 0;
     
-    public static final int FOX_HUNGER_CYCLE = 30000; // Fox gets hungry every 20 seconds
+    public static final int FOX_HUNGER_CYCLE = 25000; // Fox gets hungry every 20 seconds
     public static final int HUNTING_RANGE = 300; // Foxes hunt within 100px range
     public static final int ADULT_FOX_SUCCESSFUL_HUNT = 99; // 70% success rate for adult foxes
     public static final int YOUNG_FOX_SUCCESSFUL_HUNT = 98; // 50% success rate for young foxes
@@ -54,7 +54,7 @@ public class Constants {
     public static final int FOX_HUNT_TIMEOUT_RANGE = 80; // Fox stops chasing if rabbit is more than 80px away
 
     public static final int REPRODUCTION_DISTANCE = 500; //Distance between mates to mingle
-    public static final int FOX_MATING_CYCLE = 15000;
+    public static final int FOX_MATING_CYCLE = 18000;
     //public static final int UPPER_CAP_FOXES = 40;
     public static final int RABBIT_MATING_CYCLE = 20000;
     //public static final int UPPER_CAP_RABBITS = 70;
