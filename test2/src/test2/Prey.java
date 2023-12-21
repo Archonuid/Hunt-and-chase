@@ -36,7 +36,7 @@ public class Prey extends JPanel implements Drawable, PreyInterface {
         this.rabbitImage = Constants.loadImage(Constants.PREY_IMAGE_PATH);
         timer = new Timer();
         screenSize = Constants.getScreenSize(); // Get the current screen size
-        scheduleTransition(1, Constants.TRANSITION_DELAY); // Schedule transition to young after 30 seconds
+        scheduleTransition(1, Constants.RABBIT_TRANSITION_DELAY); // Schedule transition to young after 30 seconds
         speed = initialSpeed;
         directionX = initialDirectionX;
         directionY = initialDirectionY;
@@ -100,11 +100,11 @@ public class Prey extends JPanel implements Drawable, PreyInterface {
         switch (targetAge) {
             case 1:
                 speed = originalSpeed; // Speed for young foxes
-                scheduleTransition(2, Constants.TRANSITION_DELAY); // Schedule transition to adult after 30 seconds
+                scheduleTransition(2, Constants.RABBIT_TRANSITION_DELAY); // Schedule transition to adult after 30 seconds
                 break;
             case 2:
                 speed = originalSpeed; // Speed for adult foxes
-                scheduleDeath(Constants.DEATH_DELAY); // Schedule death after 30 seconds as an adult
+                scheduleDeath(Constants.RABBIT_DEATH_DELAY); // Schedule death after 30 seconds as an adult
                 break;
             case 3:
                 handleDeath(); // Die when reaching adult age
@@ -230,7 +230,7 @@ public class Prey extends JPanel implements Drawable, PreyInterface {
     
     private void maybeStop() {
         Random random = new Random();
-        int stopProbability = 1; // Adjust this probability as needed (e.g., 5% chance of stopping)
+        int stopProbability = 20; // Adjust this probability as needed (e.g., 5% chance of stopping)
 
         if (random.nextInt(100) < stopProbability) {
             // Stop the movement
@@ -367,13 +367,13 @@ public class Prey extends JPanel implements Drawable, PreyInterface {
                         long currentTime = System.currentTimeMillis();
                         long timeSinceLastMating = currentTime - rabbit.getLastSuccessfulMatingTime();
 
-                        if (timeSinceLastMating >= Constants.MATING_CYCLE) {
+                        if (timeSinceLastMating >= Constants.RABBIT_MATING_CYCLE) {
                             rabbit.mates();
                         }
                     }
                 }
             }
-        }, 0, Constants.MATING_CYCLE);
+        }, 0, Constants.RABBIT_MATING_CYCLE);
     }
     
     private void renewMatingCycle() {
@@ -437,58 +437,97 @@ public class Prey extends JPanel implements Drawable, PreyInterface {
         Prey mate = findMate();
 
         if (mate != null) {
-            // Move both rabbits towards each other
-            moveTowardsMate(mate);
-            mate.moveTowardsMate(this);
+            // Check the total rabbit count
+            int totalRabbits = Main.getRabbits().size();
+            double matingSuccessRate = 1.0;  // Initial mating success rate
 
-            // Both rabbits halt movements
-            stopMovements();
-            mate.stopMovements();
+            // Adjust mating success rate based on total rabbit count
+            if (totalRabbits > 50) {
+                matingSuccessRate *= 0.8;  // Reduce by 20%
+            }
+            if (totalRabbits > 100) {
+                matingSuccessRate *= 0.6;  // Reduce by additional 20%
+            }
+            if (totalRabbits > 150) {
+                matingSuccessRate *= 0.4;  // Reduce by additional 20%
+            }
+            if (totalRabbits > 200) {
+                matingSuccessRate *= 0.2;  // Reduce by additional 20%
+            }
+            if (totalRabbits > 250) {
+                matingSuccessRate *= 0.1 + Math.random() * 0.05;  // Set success rate between 5-10%
+            }
 
-            // Use SwingWorker to handle the waiting and post-waiting actions
-            SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
-                @Override
-                protected Void doInBackground() throws Exception {
-                    // Waiting for 3 seconds in the background thread
-                    Thread.sleep(3000);
-                    return null;
-                }
+            // Check if mating is successful based on the adjusted success rate
+            if (Math.random() < matingSuccessRate) {
+                // Move both rabbits towards each other
+                moveTowardsMate(mate);
+                mate.moveTowardsMate(this);
 
-                @Override
-                protected void done() {
-                    // Executed on the EDT after the background task is completed
-                    // Resuming movements for both rabbits
-                    setRandomDirection();
-                    mate.setRandomDirection();
+                // Both rabbits halt movements
+                stopMovements();
+                mate.stopMovements();
 
-                    // Spawn a new rabbit (create a newborn)
-                    Prey newborn = createNewborn(Prey.this);
+                // Use SwingWorker to handle the waiting and post-waiting actions
+                SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+                    @Override
+                    protected Void doInBackground() throws Exception {
+                        // Waiting for 3 seconds in the background thread
+                        Thread.sleep(3000);
+                        return null;
+                    }
 
-                    // Update the last successful mating time for both rabbits
-                    lastSuccessfulMatingTime = System.currentTimeMillis();
-                    mate.lastSuccessfulMatingTime = System.currentTimeMillis();
+                    @Override
+                    protected void done() {
+                        // Executed on the EDT after the background task is completed
+                        // Resuming movements for both rabbits
+                        setRandomDirection();
+                        mate.setRandomDirection();
 
-                    // Renew the seasonal mating cycle for both rabbits
-                    renewMatingCycle();
-                    mate.renewMatingCycle();
+                        // Spawn a new rabbit (create a newborn)
+                        Prey newborn = createNewborn(Prey.this);
 
-                    // Set mating status to false after successful reproduction
-                    setMating(false);
-                    mate.setMating(false);
-                }
-            };
+                        // Update the last successful mating time for both rabbits
+                        lastSuccessfulMatingTime = System.currentTimeMillis();
+                        mate.lastSuccessfulMatingTime = System.currentTimeMillis();
 
-            // Start the SwingWorker
-            worker.execute();
+                        // Renew the seasonal mating cycle for both rabbits
+                        renewMatingCycle();
+                        mate.renewMatingCycle();
+
+                        // Set mating status to false after successful reproduction
+                        setMating(false);
+                        mate.setMating(false);
+                    }
+                };
+
+                // Start the SwingWorker
+                worker.execute();
+            } else {
+                // Mating was not successful, resume movements for both rabbits
+                setRandomDirection();
+                mate.setRandomDirection();
+            }
         }
     }
     
     private void createNewborns(Prey parent) {
+        // Check the total number of rabbits before attempting to create newborns
+//        int totalRabbits = Main.getRabbits().size();
+//        if (totalRabbits >= Constants.UPPER_CAP_RABBITS) {
+//            return;  // Stop reproducing if the upper cap is reached
+//        }
+
         // Generate a random number of newborns between 1 and 8
-        int numberOfNewborns = (int) (Math.random() * 2) + 1;
+        int numberOfNewborns = (int) (Math.random() * 4) + 1;
 
         // Create and add each newborn to the existing array
         for (int i = 0; i < numberOfNewborns; i++) {
+            // Check the total number of rabbits again before creating each newborn
+//            if (Main.getRabbits().size() >= Constants.UPPER_CAP_RABBITS) {
+//                return;  // Stop reproducing if the upper cap is reached
+//            }
+
             // Generate random properties for each newborn (you may adjust this based on your requirements)
             int startX = parent.getX();  // Use the same X position as the parent
             int startY = parent.getY();  // Use the same Y position as the parent
@@ -508,7 +547,7 @@ public class Prey extends JPanel implements Drawable, PreyInterface {
             // Set age to 0 for baby rabbit
             newborn.transitionAge(0);
             Main.addRabbit(newborn);  // Access the addRabbit method in a static way using the class name
-            newborn.scheduleTransition(1, Constants.TRANSITION_DELAY);  // Adjust this method based on your implementation
+            newborn.scheduleTransition(1, Constants.RABBIT_TRANSITION_DELAY);  // Adjust this method based on your implementation
         }
     }
     

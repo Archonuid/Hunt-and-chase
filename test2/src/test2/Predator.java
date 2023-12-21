@@ -39,7 +39,7 @@ public class Predator extends JPanel implements Drawable {
         this.foxImage = Constants.loadImage(Constants.PREDATOR_IMAGE_PATH);
         timer = new Timer();
         screenSize = Constants.getScreenSize(); // Get the current screen size
-        scheduleTransition(1, Constants.TRANSITION_DELAY); // Schedule transition to young after 30 seconds
+        scheduleTransition(1, Constants.FOX_TRANSITION_DELAY); // Schedule transition to young after 30 seconds
         speed = initialSpeed;
         directionX = initialDirectionX;
         directionY = initialDirectionY;
@@ -98,11 +98,11 @@ public class Predator extends JPanel implements Drawable {
         switch (targetAge) {
             case 1:
                 speed = originalSpeed; // Speed for young foxes
-                scheduleTransition(2, Constants.TRANSITION_DELAY); // Schedule transition to adult after 30 seconds
+                scheduleTransition(2, Constants.FOX_TRANSITION_DELAY); // Schedule transition to adult after 30 seconds
                 break;
             case 2:
                 speed = originalSpeed; // Speed for adult foxes
-                scheduleDeath(Constants.DEATH_DELAY); // Schedule death after 30 seconds as an adult
+                scheduleDeath(Constants.FOX_DEATH_DELAY); // Schedule death after 30 seconds as an adult
                 break;
             case 3:
                 handleDeath(); // Die when reaching adult age
@@ -449,17 +449,17 @@ public class Predator extends JPanel implements Drawable {
             @Override
             public void run() {
                 for (Predator fox : Main.getFoxes()) {
-                    if (fox != null && !fox.isHungry() && !fox.isAlive()) {
+                    if (fox != null && fox.isAlive()) { //!fox.isHungry() &&
                         long currentTime = System.currentTimeMillis();
                         long timeSinceLastMating = currentTime - fox.getLastSuccessfulMatingTime();
 
-                        if (timeSinceLastMating >= Constants.MATING_CYCLE) {
+                        if (timeSinceLastMating >= Constants.FOX_MATING_CYCLE) {
                             fox.mates();
                         }
                     }
                 }
             }
-        }, 0, Constants.MATING_CYCLE);
+        }, 0, Constants.FOX_MATING_CYCLE);
     }
 
     private void renewMatingCycle() {
@@ -505,51 +505,121 @@ public class Predator extends JPanel implements Drawable {
     }
 
     public void mates() {
+        // Find a suitable mate
         Predator mate = findMate();
-        if (mate != null) {
-            moveTowardsMate(mate);
-            mate.moveTowardsMate(this);
-            stopMovements();
-            mate.stopMovements();
 
-            SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
-                @Override
-                protected Void doInBackground() throws Exception {
-                    Thread.sleep(3000);
-                    return null;
-                }
+        if (mate != null && getAge() == 2 && mate.getAge() == 2 && isAlive() && mate.isAlive()) {  // Add check for adult foxes being alive
+            // Check the total fox count
+            int totalFoxes = Main.getFoxes().size();
+            double matingSuccessRate = 1.0;  // Initial mating success rate
 
-                @Override
-                protected void done() {
-                    setRandomDirection();
-                    mate.setRandomDirection();
-                    Predator newborn = createNewborn(Predator.this);
-                    lastSuccessfulMatingTime = System.currentTimeMillis();
-                    mate.lastSuccessfulMatingTime = System.currentTimeMillis();
-                    renewMatingCycle();
-                    mate.renewMatingCycle();
-                    setMating(false);
-                    mate.setMating(false);
-                }
-            };
-            worker.execute();
+            // Adjust mating success rate based on total fox count
+            if (totalFoxes > 50) {
+                matingSuccessRate *= 0.8;  // Reduce by 20%
+            }
+            if (totalFoxes > 100) {
+                matingSuccessRate *= 0.5;  // Reduce by additional 20%
+            }
+            if (totalFoxes > 150) {
+                matingSuccessRate *= 0.4;  // Reduce by additional 20%
+            }
+            if (totalFoxes > 200) {
+                matingSuccessRate *= 0.4;  // Reduce by additional 20%
+            }
+            if (totalFoxes > 250) {
+                matingSuccessRate *= 0.1 + Math.random() * 0.05;  // Set success rate between 5-10%
+            }
+
+            // Check if mating is successful based on the adjusted success rate
+            if (Math.random() < matingSuccessRate) {
+                // Move both foxes towards each other
+                moveTowardsMate(mate);
+                mate.moveTowardsMate(this);
+
+                // Both foxes halt movements
+                stopMovements();
+                mate.stopMovements();
+
+                // Use SwingWorker to handle the waiting and post-waiting actions
+                SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+                    @Override
+                    protected Void doInBackground() throws Exception {
+                        // Waiting for 3 seconds in the background thread
+                        Thread.sleep(3000);
+                        return null;
+                    }
+
+                    @Override
+                    protected void done() {
+                        // Executed on the EDT after the background task is completed
+                        // Resuming movements for both foxes
+                        setRandomDirection();
+                        mate.setRandomDirection();
+
+                        // Spawn a new fox (create a newborn)
+                        Predator newborn = createNewborn(Predator.this);
+
+                        // Update the last successful mating time for both foxes
+                        lastSuccessfulMatingTime = System.currentTimeMillis();
+                        mate.lastSuccessfulMatingTime = System.currentTimeMillis();
+
+                        // Renew the seasonal mating cycle for both foxes
+                        renewMatingCycle();
+                        mate.renewMatingCycle();
+
+                        // Set mating status to false after successful reproduction
+                        setMating(false);
+                        mate.setMating(false);
+                    }
+                };
+
+                // Start the SwingWorker
+                worker.execute();
+            } else {
+                // Mating was not successful, resume movements for both foxes
+                setRandomDirection();
+                mate.setRandomDirection();
+            }
         }
     }
 
     private void createNewborns(Predator parent) {
-        int numberOfNewborns = new Random().nextInt(5) + 1;  // 1-6 newborns
-        for (int i = 0; i < numberOfNewborns; i++) {
-            int startX = parent.getX();
-            int startY = parent.getY();
-            int initialSpeed = parent.getSpeed();
-            int initialDirectionX = 0;
-            int initialDirectionY = 0;
-            boolean isMale = Math.random() < 0.5;
+        // Check the total number of foxes before attempting to create newborns
+//        int totalFoxes = Main.getFoxes().size();
+//        if (totalFoxes >= Constants.UPPER_CAP_FOXES) {
+//            return;  // Stop reproducing if the upper cap is reached
+//        }
 
+        // Generate a random number of newborns between 1 and 3
+        int numberOfNewborns = (int) (Math.random() * 2) + 1;
+
+        // Create and add each newborn to the existing array
+        for (int i = 0; i < numberOfNewborns; i++) {
+            // Check the total number of foxes again before creating each newborn
+//            if (Main.getFoxes().size() >= Constants.UPPER_CAP_FOXES) {
+//                return;  // Stop reproducing if the upper cap is reached
+//            }
+
+            // Generate random properties for each newborn (you may adjust this based on your requirements)
+            int startX = parent.getX();  // Use the same X position as the parent
+            int startY = parent.getY();  // Use the same Y position as the parent
+            int initialSpeed;
+            if (parent.getAge() == 0) {
+                initialSpeed = (int) (Constants.ADULT_SIZE * Constants.BABY_SPEED_FACTOR);
+            } else {
+                initialSpeed = parent.getSpeed();  // Use the same initial speed as the parent
+            }
+            int initialDirectionX = 0;  // Initialize directionX for the newborn (you may adjust this based on your requirements)
+            int initialDirectionY = 0;  // Initialize directionY for the newborn (you may adjust this based on your requirements)
+            boolean isMale = Math.random() < 0.5;  // 50% chance of being male
+
+            // Create a new Predator object for the newborn
             Predator newborn = new Predator(startX, startY, initialSpeed, initialDirectionX, initialDirectionY, isMale);
+
+            // Set age to 0 for baby fox
             newborn.transitionAge(0);
-            Main.addFox(newborn);
-            newborn.scheduleTransition(1, Constants.TRANSITION_DELAY);
+            Main.addFox(newborn);  // Access the addFox method in a static way using the class name
+            newborn.scheduleTransition(1, Constants.FOX_TRANSITION_DELAY);  // Adjust this method based on your implementation
         }
     }
 
